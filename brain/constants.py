@@ -53,7 +53,15 @@ MEMORY = dict(
 
 # Innate cruise and learned avoidance. VMAX matches fly-car MOVE_MPS.
 VMAX = 0.06
+# Arena unicycle track, metres. This is fly-car's wheel spacing.
+# sim/arena.py divides by it. It is not the measured chassis below.
 TRACK = 0.12
+# Measured chassis, metres. Rear track is the distance between the rear
+# wheels (9.75 cm). Wheelbase is the rear axle to the front axle (8.0 cm).
+# Nothing in the sim or the motor law reads these; the integrator keeps
+# using TRACK so existing runs do not move.
+CHASSIS_REAR_TRACK_M = 0.0975
+CHASSIS_WHEELBASE_M = 0.08
 WHEEL_BIAS = 0.35
 WHEEL_APPROACH = 1.0
 WHEEL_AVOID = 2.5

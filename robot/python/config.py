@@ -1,5 +1,11 @@
 """Knobs for the UNO Q app. The brain's equations live in ``brain``."""
 
+# Measured chassis. Rear track is 9.75 cm between the rear wheels, wheelbase
+# is 8.0 cm from the rear axle to the front axle. The pulse map does not use
+# them. The arena unicycle keeps brain.constants.TRACK (0.12 m).
+from brain.constants import CHASSIS_REAR_TRACK_M as REAR_TRACK_M
+from brain.constants import CHASSIS_WHEELBASE_M as WHEELBASE_M
+
 # Picture left is the robot's right when this is True.
 MIRROR = False
 
