@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fly-memento"
+version = "0.1.0"
+description = "A two-wheel robot that learns with a reduced fruit-fly mushroom body"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Nobuhiro Kuroiwa" }]
+dependencies = [
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["brain*", "sim*"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "robot/python"]
+testpaths = ["tests"]

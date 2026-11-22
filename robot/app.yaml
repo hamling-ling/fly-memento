@@ -1,0 +1,10 @@
+# App Lab アプリ。Linux 側が脳とバツ画面、マイコン側が車輪。
+
+name: fly-memento
+description: 罰ボタンでキノコ体に覚えさせ、左右の車輪を回す
+icon: 🧠
+
+ports:
+  - 8000
+
+bricks: []

@@ -1,0 +1,5 @@
+{
+  "green": {"hue_low": 90, "hue_high": 150, "saturation": 80, "value": 60},
+  "yellow": {"hue_low": 35, "hue_high": 75, "saturation": 80, "value": 60},
+  "note": "Starting gates in degrees and 0-255. Not fitted on the real camera; replace them the way fly-car fits color_thresholds.json."
+}
