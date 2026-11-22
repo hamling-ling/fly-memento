@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fly-memento バツ</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: sans-serif; background: #f4f1ea; color: #1d2433;
+  }
+  header { padding: 16px 18px 0; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p { margin: 0; color: #555; font-size: 14px; line-height: 1.45; }
+  button.punish {
+    display: block; width: calc(100% - 28px); margin: 16px auto 8px;
+    height: 46vh; min-height: 220px; border: 0; border-radius: 28px;
+    background: #c0392b; color: white; font-size: 18vh; font-weight: 800;
+    letter-spacing: 0.08em; touch-action: manipulation;
+  }
+  button.punish:active { background: #7b1e14; }
+  button.cycle, button:disabled { font-size: 18px; }
+  .row { display: flex; gap: 10px; padding: 0 14px; }
+  button.cycle {
+    flex: 1; height: 56px; border-radius: 14px; border: 2px solid #0d2b5c;
+    background: white; color: #0d2b5c; font-weight: 700; touch-action: manipulation;
+  }
+  .flags { display: flex; gap: 18px; padding: 12px 18px; font-size: 16px; }
+  .flags label { display: flex; gap: 8px; align-items: center; }
+  dl {
+    margin: 0 14px 24px; background: white; border-radius: 14px;
+    padding: 12px 14px; display: grid; grid-template-columns: 8em 1fr; gap: 4px 8px;
+    font-size: 15px;
+  }
+  dt { color: #666; }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<header>
+  <h1>バツ</h1>
+  <p>ロボットがその色を見ているあいだに押す。見ていた細胞だけが罰を覚える。1秒に1回まで。</p>
+</header>
+<button class="punish" id="punish" type="button">バツ</button>
+<div class="row">
+  <button class="cycle" id="cycle" type="button">周を始める</button>
+</div>
+<div class="flags">
+  <label><input id="eps" type="checkbox" checked> ε（ギャップ結合）</label>
+  <label><input id="osc" type="checkbox" checked> 振動子</label>
+</div>
+<dl>
+  <dt>モード</dt><dd id="mode">…</dd>
+  <dt>周</dt><dd id="cyc">…</dd>
+  <dt>記憶</dt><dd id="mem">…</dd>
+  <dt>罰</dt><dd id="shocks">…</dd>
+  <dt>見ている</dt><dd id="see">…</dd>
+  <dt>時間</dt><dd id="time">…</dd>
+</dl>
+<script>
+const modeName = { approach: "接近", avoid: "回避", wait: "待機" };
+const punish = document.getElementById("punish");
+const cycle = document.getElementById("cycle");
+const eps = document.getElementById("eps");
+const osc = document.getElementById("osc");
+
+punish.addEventListener("click", () => fetch("/punish", { method: "POST" }));
+cycle.addEventListener("click", () => fetch("/cycle", { method: "POST" }).then(refresh));
+function sendFlags() {
+  fetch("/flags", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eps: eps.checked, osc: osc.checked })
+  });
+}
+eps.addEventListener("change", sendFlags);
+osc.addEventListener("change", sendFlags);
+
+function refresh() {
+  fetch("/state").then(r => r.json()).then(s => {
+    document.getElementById("mode").textContent = modeName[s.mode] || s.mode;
+    const cyc = s.cycle === "cycle" ? "訓練の周" : "休息";
+    document.getElementById("cyc").textContent = cyc + (s.ltm_window ? "（長期記憶の窓）" : "");
+    cycle.textContent = s.cycle === "cycle" ? "周を終えて休む" : "周を始める";
+    document.getElementById("mem").textContent =
+      "S " + s.S.toFixed(2) + "   ARM " + s.ARM.toFixed(2) + "   LTM " + s.LTM.toFixed(2);
+    document.getElementById("shocks").textContent = String(s.shocks);
+    const f = s.seeing;
+    document.getElementById("see").textContent =
+      "緑 " + f.green_l.toFixed(2) + "/" + f.green_r.toFixed(2) +
+      "  黄 " + f.yellow_l.toFixed(2) + "/" + f.yellow_r.toFixed(2);
+    const hours = s.bio_min / 60;
+    document.getElementById("time").textContent =
+      "ロボット " + Math.round(s.robot_s) + " 秒  /  生物 " + hours.toFixed(2) + " 時間";
+    if (document.activeElement !== eps) eps.checked = s.eps;
+    if (document.activeElement !== osc) osc.checked = s.osc;
+  }).catch(() => {});
+}
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>

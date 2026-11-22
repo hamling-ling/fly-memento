@@ -1,0 +1,118 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
+<style>
+@page{size:1600px 900px;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1600px;height:900px;font-family:'Noto Sans CJK JP','Noto Sans JP',sans-serif;color:#1d2433;background:#f4f6fa;overflow:hidden}
+.hdr{height:104px;background:linear-gradient(90deg,#0d2b5c,#1c4f9c 60%,#2a7bd1);color:#fff;padding:12px 26px;display:flex;align-items:center;justify-content:space-between}
+.hdr h1{font-size:36px;font-weight:700;letter-spacing:1px}
+.hdr .sub{font-size:16.5px;opacity:.93;margin-top:4px}
+.tag{background:#ffcc33;color:#0d2b5c;font-weight:700;font-size:15px;padding:7px 14px;border-radius:18px;white-space:nowrap}
+.main{display:grid;grid-template-columns:268px 1fr 330px;gap:12px;padding:10px 16px 0 16px;height:740px}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:11px 13px}
+.h{font-size:16.5px;font-weight:700;color:#0d2b5c;border-left:6px solid #2a7bd1;padding-left:8px;margin-bottom:7px}
+.small{font-size:13px;line-height:1.5}
+ul{padding-left:17px} li{margin-bottom:3px}
+.big{font-size:27px;font-weight:700;color:#c0392b;line-height:1.1}
+.mid{font-size:19px;font-weight:700;color:#c0392b}
+.col{display:flex;flex-direction:column;gap:10px}
+.chain{display:flex;align-items:stretch;gap:0;margin-bottom:10px}
+.node{flex:1;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:7px 8px;text-align:center;border-top:6px solid}
+.node .k{font-size:22px;font-weight:700}
+.node .e{font-size:11px;color:#666;margin-bottom:3px}
+.node .d{font-size:12.2px;line-height:1.38;text-align:left}
+.arr{width:22px;display:flex;align-items:center;justify-content:center;font-size:26px;color:#2a7bd1;font-weight:700}
+.n1{border-color:#6b4fbb}.n1 .k{color:#6b4fbb}.n2{border-color:#1c7fbf}.n2 .k{color:#1c7fbf}.n3{border-color:#1b8f4c}.n3 .k{color:#1b8f4c}.n4{border-color:#e07b00}.n4 .k{color:#e07b00}.n5{border-color:#c0392b}.n5 .k{color:#c0392b}
+.disc{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dc{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:9px 11px;display:flex;gap:9px}
+.dc .num{font-size:26px;font-weight:700;color:#fff;background:#0d2b5c;border-radius:50%;width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center}
+.dc .t{font-size:15px;font-weight:700;color:#0d2b5c;margin-bottom:2px}
+.dc .b{font-size:12.4px;line-height:1.45}
+.figs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px}
+.fig{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12);padding:6px;text-align:center}
+.fig img{width:100%;height:158px;object-fit:contain}
+.fig .c{font-size:11.5px;color:#444}
+.hyp{background:#ffe9b3;color:#8a5a00;font-weight:700;border-radius:4px;padding:0 4px;font-size:.92em}
+.wow{background:linear-gradient(135deg,#fff5d6,#ffe3a3);border:2px solid #f0b400}
+.ask{background:#0d2b5c;color:#fff}
+.ask .h{color:#ffcc33;border-color:#ffcc33}
+.foot{position:absolute;left:16px;right:16px;bottom:7px;font-size:11.6px;color:#555;background:#fff;border-radius:6px;padding:5px 10px;border-left:5px solid #999}
+</style></head><body>
+<div class="hdr"><div><h1>ハエの脳の配線図から、"記憶して行動を変える"ロボットへ</h1>
+<div class="sub">配線（ミクロ）→ 脳のリズム（力学）→ 記憶 → 行動 → 実機ロボ を一本の鎖でつなぐ、スケール横断の"通し"シミュレーション</div></div>
+<div class="tag">全部 公開データ＋手元の計算機で再現可能</div></div>
+<div class="main">
+<!-- left -->
+<div class="col">
+<div class="card"><div class="h">課題：配線図は完成。だが…</div>
+<div class="small">FlyEM <b>MaleCNS v1.0</b>（オス全脳の配線図）で、記憶中枢キノコ体の結線が数えられるようになった。
+<ul style="margin-top:5px"><li>ケニヨン細胞 <b>4,064</b>／出力MBON <b>97</b>／ドーパミン細胞 PAM <b>316</b>・PPL1 <b>16</b></li>
+<li>KC→MBON だけで <b>463,640</b> シナプス</li></ul>
+<b style="color:#c0392b">「どう動いて、記憶と行動になるのか」</b>は配線表を眺めるだけではわからない。間をつなぐ<b>力学（リズム・同期・安定性）</b>が欠けている。</div></div>
+<div class="card"><div class="h">やったこと</div>
+<div class="small"><ul>
+<li>実配線でモデル化し、<b>配線シャッフル</b>と常に比較</li>
+<li>Plaçais 2012・Berry 2012・Aso 2014・Pavlowsky 2018 などの実験で<b>答え合わせ</b></li>
+<li>EM・遺伝子発現データで仮説の裏付け調査</li>
+<li>二輪ロボ <b>fly-car</b> 用の縮約版で通し実験</li></ul></div></div>
+<div class="card" style="flex:1"><div class="h">ロボの"脳"スペック</div>
+<div class="small"><ul>
+<li>KC <b>100</b>個＋MP1/MV1振動子＋3区画の記憶</li>
+<li>状態 <b>4.5 kB</b>、UNO Qマイコン（M33 160 MHz）の<b>約0.3%</b></li>
+<li><b>60倍圧縮</b>：1時間=1分、"翌日"=24分</li></ul></div></div>
+</div>
+<!-- center -->
+<div>
+<div class="chain">
+<div class="node n1"><div class="k">配線</div><div class="e">connectome</div><div class="d">オス全脳EM配線図<br>KC・APL・MBON・DAN の実シナプス数で結合を設定</div></div>
+<div class="arr">▶</div>
+<div class="node n2"><div class="k">力学</div><div class="e">dynamics</div><div class="d">PPL1ドーパミン細胞 MP1・MV1 が<b>約0.09 Hz</b>で同期振動<br>リミットサイクル・多安定</div></div>
+<div class="arr">▶</div>
+<div class="node n3"><div class="k">記憶</div><div class="e">memory</div><div class="d">振動が<b>忘却</b>と<b>固定化</b>を切替<br>集中学習→ARM<br>分散学習→LTM</div></div>
+<div class="arr">▶</div>
+<div class="node n4"><div class="k">行動</div><div class="e">behavior</div><div class="d">MBON区画地図×伝達物質で<b>近づく／避ける</b>を決定（T字迷路スコア）</div></div>
+<div class="arr">▶</div>
+<div class="node n5"><div class="k">ロボ</div><div class="e">fly-car</div><div class="d">Arduino UNO Q 上で動く縮約脳。罰を受けた色を<b>翌日も避ける</b></div></div>
+</div>
+<div class="disc">
+<div class="dc"><div class="num">1</div><div><div class="t">実配線は"揺れやすく、記憶を抱えやすい"</div>
+<div class="b">KC–APLループ：実配線は約<span class="mid">29 Hz</span>の持続振動、シャッフル配線は g=80 まで安定。<br>MBON–DANループ：多安定になる割合 実配線 <span class="mid">96%</span> vs シャッフル 30%／49%（強い結合 G=100 を仮定）</div></div></div>
+<div class="dc"><div class="num">2</div><div><div class="t">Plaçais 2012 の"脳のリズム"を再現</div>
+<div class="b">内因性振動子＋MP1–MV1直接結合 ε≥0.05<span class="hyp">仮説</span>で一致率 <span class="mid">70–98%</span>。共通入力だけでは同期 <b>≤22%</b>。EMでは同側101–103の膜近接 <b>121–159 µm²</b>（対PPL105の10–40倍）</div></div></div>
+<div class="dc"><div class="num">3</div><div><div class="t">ミクロの配線が行動を決める</div>
+<div class="b">本物の区画地図×伝達物質で嫌悪の駆動力が <span class="mid">2.3倍</span>（シャッフル比, p≈0.02）。ドーパミン操作実験7種中<b>5種</b>の向きを再現（1種は弱い・一部はモデルの前提に組込み済み）</div></div></div>
+<div class="dc"><div class="num">4</div><div><div class="t">ロボが"分散学習で長く覚える"</div>
+<div class="b">72時間後の回避スコア：分散 <span class="mid">70</span> vs 集中 <span class="mid">45</span>（p=0.002）。同期を切ると(ε=0) LTM <b>0.23→0.07（約70%減）</b>。脳はKC100個・<b>4.5 kB</b>・マイコン負荷<b>0.3%</b></div></div></div>
+</div>
+<div class="figs">
+<div class="fig"><img src="img/osc.png"><div class="c">MP1(青)・MV1(橙)の自発振動：結合あり=同期／なし=ずれる</div></div>
+<div class="fig"><img src="img/robot_traj.png"><div class="c">ロボの軌跡：緑(罰)と黄(安全)の選択</div></div>
+<div class="fig"><img src="img/robot_retention.png"><div class="c">記憶保持（ロボ時間 1秒=1分 に圧縮）</div></div>
+</div>
+<div class="card" style="margin-top:10px"><div class="h">検証できる予測（ウェット実験で白黒つく）</div>
+<div class="small" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+<div>① <b>MP1/MV1の振動を止めると</b>長期記憶(LTM)ができず、記憶はすべてARMに → <b>タンパク質合成阻害剤が効かなくなる</b></div>
+<div>② MP1–MV1結合<span class="hyp">仮説</span>の効果は、下流が<b>"同時発火"</b>を読むか<b>"平均"</b>を読むかで有無が分かれる → shakBノックダウン＋阻害剤で判定</div>
+<div>③ 決定実験：MP1–MV1の<b>同時ホールセル記録</b>で結合係数を測る（安価な第一歩：neurobiotin色素カップリング）</div></div></div>
+</div>
+<!-- right -->
+<div class="col">
+<div class="card wow"><div class="h" style="border-color:#f0b400">ここが凄い</div>
+<div class="small"><ul>
+<li><b>ミクロ→マクロを一気通貫</b>：シナプス数から、リズム・記憶・行動・実機ロボまで同じモデルの鎖でつながる</li>
+<li><b>実配線 vs シャッフル</b>で「配線に意味があるか」を毎回テスト</li>
+<li>文献の実験結果で答え合わせ、<b>反証できる予測</b>を出す</li>
+<li>全データ公開・PCとマイコンで動く → <b>誰でも追試できる</b></li>
+<li>"記憶する虫ロボ"は<b>見てわかるデモ</b>：展示・教育にも強い</li></ul></div></div>
+<div class="card"><div class="h">次の一手</div>
+<div class="small"><ul>
+<li><b>実機化</b>：fly-carに記憶モジュール（緑/黄LED＋バンパ）、ε・振動子のON/OFFデモ付き</li>
+<li><b>"翌日"での差</b>を出す調整（ARM減衰・本番の試行回数と消去も評価）</li>
+<li><b>報酬学習</b>へ拡張（Pavlowsky 2018のMBON11効果は未再現）</li>
+<li>生理学者と組み<b>MP1–MV1結合の仮説を検証</b></li></ul></div></div>
+<div class="card ask" style="flex:1"><div class="h">みんなで頑張ろう！</div>
+<div class="small" style="line-height:1.6">シミュレーションでは<b>配線→力学→記憶→行動→ロボ</b>の鎖が通りました。<br>次は<b>実機で「昨日の記憶で動く虫ロボ」</b>を動かそう。<br>
+<span style="color:#ffcc33;font-weight:700">ミクロの配線がマクロの行動を変える瞬間を、この手で見届けよう！</span></div></div>
+</div>
+</div>
+<div class="foot">⚠ 正直な注記：数値はすべてモデル内の結果（ハエでの実測ではない）。MP1–MV1ギャップ結合は直接証拠のない<b>作業仮説</b>。記憶・運動の定数は仮定で、ロボの時間は60倍に圧縮（1秒=1分）。24時間後では分散/集中の差はまだ出ていない（72時間で差）。MBON–DANの多安定には強い結合（G≥30）が必要。</div>
+</body></html>

@@ -1,0 +1,4 @@
+flops/step {'pn': 288, 'kc': 1400, 'mbon': 1800, 'dan': 40, 'mem': 6000, 'motor': 30} 9558
+bytes {'kc_claw_idx': 400, 'traces_SAL': 3600, 'elig': 400, 'dan': 24, 'misc': 64} 4488
+50 Hz -> 0.48 MFLOP/s; at ~1 flop/cycle on 160 MHz M33+FPU: 0.30 % CPU (order-of-magnitude, single-precision, no SIMD)
+python reference: 140 us per 20-ms step
