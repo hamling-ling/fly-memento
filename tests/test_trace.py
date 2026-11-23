@@ -6,8 +6,8 @@ from trace import trace_line, trace_mark
 
 def _line(**overrides) -> str:
     fields = dict(
-        green=(0.8, 0.1),
-        yellow=(0.0, 0.4),
+        red=(0.8, 0.1),
+        blue=(0.0, 0.4),
         avoid=(0.12, 0.34),
         mbon_left=(0.9, 0.5, 0.7),
         mbon_right=(1.0, 0.8, 0.6),
@@ -28,8 +28,8 @@ def _line(**overrides) -> str:
 
 def test_trace_line_names_the_shock_the_mbon_and_the_pulses():
     text = _line()
-    assert "green 0.80 0.10" in text
-    assert "yellow 0.00 0.40" in text
+    assert "red 0.80 0.10" in text
+    assert "blue 0.00 0.40" in text
     assert "avoid L:0.120 R:0.340" in text
     assert "mbon L:0.90,0.50,0.70 R:1.00,0.80,0.60" in text
     assert "S 0.130" in text

@@ -40,7 +40,7 @@
 <body>
 <header>
   <h1>バツ</h1>
-  <p>ロボットがその色を見ているあいだに押す。見ていた細胞だけが罰を覚える。1秒に1回まで。</p>
+  <p>赤を見ているあいだに押す。見ていた細胞だけが罰を覚える。青は罰なし。1秒に1回まで。</p>
 </header>
 <button class="punish" id="punish" type="button">バツ</button>
 <div class="row">
@@ -88,8 +88,8 @@ function refresh() {
     document.getElementById("shocks").textContent = String(s.shocks);
     const f = s.seeing;
     document.getElementById("see").textContent =
-      "緑 " + f.green_l.toFixed(2) + "/" + f.green_r.toFixed(2) +
-      "  黄 " + f.yellow_l.toFixed(2) + "/" + f.yellow_r.toFixed(2);
+      "赤 " + f.red_l.toFixed(2) + "/" + f.red_r.toFixed(2) +
+      "  青 " + f.blue_l.toFixed(2) + "/" + f.blue_r.toFixed(2);
     const hours = s.bio_min / 60;
     document.getElementById("time").textContent =
       "ロボット " + Math.round(s.robot_s) + " 秒  /  生物 " + hours.toFixed(2) + " 時間";

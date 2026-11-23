@@ -47,7 +47,7 @@ def write_figure(rows, extras, path: Path):
     ax.set_xlim(-0.55, 0.55)
     ax.set_ylim(-0.55, 0.55)
     ax.plot([-0.15, 0.15], [0.38, 0.38], color="k", lw=3)
-    ax.plot(0.0, 0.35, "o", color="green", ms=10, mec="k")
+    ax.plot(0.0, 0.35, "o", color="red", ms=10, mec="k")
     spaced = extras.get(("spaced", "WT"), {})
     train = spaced.get("train") or []
     if train and len(train[0]):

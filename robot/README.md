@@ -30,9 +30,11 @@ arduino-app-cli app stop ~/ArduinoApps/fly-memento/
 scripts/logs_fly-memento.sh
 ```
 
-止まっているときは 1 秒に 1 行、動いているあいだは 0.1 秒ごと。`punish`、`avoid`、`mbon`、`ARM`、`LTM`、`pulse` が出る。ボード上で見る場合は `arduino-app-cli app logs ~/ArduinoApps/fly-memento/ --follow --tail 30`。
+止まっているときは 1 秒に 1 行、動いているあいだは 0.1 秒ごと。`red`、`blue`、`punish`、`avoid`、`mbon`、`ARM`、`LTM`、`pulse` が出る。ボード上で見る場合は `arduino-app-cli app logs ~/ArduinoApps/fly-memento/ --follow --tail 30`。
 
-スマホは同じネットワークから `http://<UNO Q のアドレス>:8000/` を開く。ポートは `app.yaml` の 8000。画面の「バツ」が罰である。起動ログに `バツ画面` とこのポートが出る。
+スマホは同じネットワークから `http://<UNO Q のアドレス>:8000/` を開く。ポートは `app.yaml` の 8000。画面の「バツ」が罰である。赤が見えているあいだに押す。青は罰なし。起動ログに `バツ画面` とこのポートが出る。
+
+カメラは赤を CS+、青を CS− として数える。範囲は `python/color_thresholds.json`。赤は色相が 0° と 360° の両方にまたがる。彩度 60、明度 50 は室内向けの床で、ボードの照明に合わせて取り直す。
 
 `No Colon In First Item Of Depfile` と出たら、スケッチのキャッシュが壊れている。`--rebuild` を付けて配置し直す。
 

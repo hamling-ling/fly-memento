@@ -9,8 +9,8 @@ from __future__ import annotations
 
 
 def trace_line(
-    green: tuple[float, float],
-    yellow: tuple[float, float],
+    red: tuple[float, float],
+    blue: tuple[float, float],
     avoid: tuple[float, float],
     mbon_left: tuple[float, float, float],
     mbon_right: tuple[float, float, float],
@@ -30,8 +30,8 @@ def trace_line(
     right_v, left_v = wheel
     pulse_r, pulse_l = pulses
     return (
-        f"green {green[0]:.2f} {green[1]:.2f}  "
-        f"yellow {yellow[0]:.2f} {yellow[1]:.2f}  "
+        f"red {red[0]:.2f} {red[1]:.2f}  "
+        f"blue {blue[0]:.2f} {blue[1]:.2f}  "
         f"avoid L:{avoid[0]:.3f} R:{avoid[1]:.3f}  "
         f"mbon L:{mbon_left[0]:.2f},{mbon_left[1]:.2f},{mbon_left[2]:.2f} "
         f"R:{mbon_right[0]:.2f},{mbon_right[1]:.2f},{mbon_right[2]:.2f}  "

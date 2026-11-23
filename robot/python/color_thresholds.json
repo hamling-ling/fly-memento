@@ -1,5 +1,13 @@
 {
-  "green": {"hue_low": 90, "hue_high": 150, "saturation": 80, "value": 60},
-  "yellow": {"hue_low": 35, "hue_high": 75, "saturation": 80, "value": 60},
-  "note": "Starting gates in degrees and 0-255. Not fitted on the real camera; replace them the way fly-car fits color_thresholds.json."
+  "red": {
+    "ranges": [[0, 20], [340, 360]],
+    "saturation": 60,
+    "value": 50
+  },
+  "blue": {
+    "ranges": [[200, 260]],
+    "saturation": 60,
+    "value": 50
+  },
+  "note": "Indoor starting gates, not a fit on the real camera. Hue is degrees (twice an OpenCV hue). Red is two ranges because hue wraps through 0°: [0, 20] and [340, 360] are OpenCV about 0–10 and 170–180. Blue [200, 260] is OpenCV about 100–130. Saturation and value are 0–255 floors so a dim or slightly washed patch still counts and gray walls do not. Recalibrate under the room lights the way fly-car fits color_thresholds.json. Warm bulbs can push red toward orange and blue toward purple; widen the open end of a range if the panel is missed, and raise saturation if wood or skin counts as red."
 }

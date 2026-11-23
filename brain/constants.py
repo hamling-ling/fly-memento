@@ -28,8 +28,11 @@ GAINS = np.array([0.21, 0.46, 0.33], np.float32)
 # is carried along and not read by the Kenyon cells.
 HUES = np.arange(8, dtype=np.float64) * 45.0
 HUE_SIGMA = 30.0
-CS_PLUS_HUE = 120.0  # green
-CS_MINUS_HUE = 60.0  # yellow
+# Red is punished (CS+), blue is safe (CS−). Degrees, on the same circle as
+# HUES. 0 wraps through 360; 240 is pure blue from bgr_to_hsv (OpenCV hue
+# about 120). Camera gates are separate and wider: color_thresholds.json.
+CS_PLUS_HUE = 0.0
+CS_MINUS_HUE = 240.0
 
 # Per biological minute, except eta_p (per US pulse) and the taus in minutes.
 MEMORY = dict(
