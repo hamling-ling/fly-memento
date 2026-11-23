@@ -1,6 +1,6 @@
 # 記憶する虫ロボ：縮約キノコ体、シミュレーション、UNO Q
 
-fly-memento の設計メモ。式の出典と、測っていない定数の置き場所。研究の経過は [SUMMARY.md](SUMMARY.md)、ポスターは [poster/poncho_e.html](poster/poncho_e.html)。
+fly-memento の設計メモ。式の出典と、測っていない定数の置き場所。コードから書き下した式は [MODEL.md](MODEL.md)。研究の経過は [SUMMARY.md](SUMMARY.md)、ポスターは [poster/poncho_e.html](poster/poncho_e.html)。
 
 ## 参照したもの
 

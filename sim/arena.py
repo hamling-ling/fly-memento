@@ -74,6 +74,7 @@ class Agent:
             wheel_left += self.noise[0]
             wheel_right += self.noise[1]
             speed = (wheel_left + wheel_right) / 2.0
+            # TRACK is fly-car's 0.12 m, not CHASSIS_REAR_TRACK_M (9.75 cm).
             omega = (wheel_right - wheel_left) / TRACK
             new = self.pos + dt * speed * np.array([np.cos(self.heading), np.sin(self.heading)])
             self.heading += dt * omega

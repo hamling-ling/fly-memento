@@ -22,7 +22,7 @@
 brain/     シミュレーションと実機が共有する脳。時間圧縮は引数
 sim/       1 m のアリーナ。分散・集中・εなし・振動子オフ
 robot/     UNO Q の App Lab アプリ（Python、バツ画面、D3/D5 のスケッチ）
-docs/      設計メモ、研究ログ、ポスター、アーカイブした表
+docs/      数式（MODEL.md）、設計メモ、研究ログ、ポスター、アーカイブした表
 tests/     脳の決定性、状態の大きさ、バツ画面
 ```
 
@@ -80,7 +80,7 @@ python3 robot/python/main.py --dry
 - センサは理想化している。カメラの緑と黄は、アリーナのランプの代理であり、同じ強度にはなっていない。`COLOR_GAIN` は仮のつまみである。
 - 数値はモデルの中の話で、ハエで測った記憶量ではない。
 
-設計の対応表、計算量（1 ステップ約 9600 flop、状態約 4.5 kB、50 Hz で M33 の 1% 未満）、ハードウェアの割り当ては [docs/DESIGN.md](docs/DESIGN.md)。研究ログは [docs/SUMMARY.md](docs/SUMMARY.md)。ポスターは [docs/poster/poncho_e.html](docs/poster/poncho_e.html)。
+式をコードに合わせて書いたものは [docs/MODEL.md](docs/MODEL.md)。設計の対応表、計算量（1 ステップ約 9600 flop、状態約 4.5 kB、50 Hz で M33 の 1% 未満）、ハードウェアの割り当ては [docs/DESIGN.md](docs/DESIGN.md)。研究ログは [docs/SUMMARY.md](docs/SUMMARY.md)。ポスターは [docs/poster/poncho_e.html](docs/poster/poncho_e.html)。
 
 ## ライセンス
 
