@@ -41,6 +41,7 @@
 <header>
   <h1>バツ</h1>
   <p>赤を見ているあいだに押す。見ていた細胞だけが罰を覚える。青は罰なし。1秒に1回まで。</p>
+  <p>バツは周の外でも効く。休息の表示は罰を止めていない。赤なら S と ARM が増え、LTM は増えない。LTM は、周を始めて罰し、終えて 15 秒休み、もう一周終えたあとの 10 秒で増える。</p>
 </header>
 <button class="punish" id="punish" type="button">バツ</button>
 <div class="row">
@@ -54,6 +55,9 @@
   <dt>モード</dt><dd id="mode">…</dd>
   <dt>周</dt><dd id="cyc">…</dd>
   <dt>記憶</dt><dd id="mem">…</dd>
+  <dt>疲労</dt><dd id="phi">…</dd>
+  <dt>振動</dt><dd id="dan">…</dd>
+  <dt>案内</dt><dd id="note">…</dd>
   <dt>罰</dt><dd id="shocks">…</dd>
   <dt>見ている</dt><dd id="see">…</dd>
   <dt>時間</dt><dd id="time">…</dd>
@@ -80,11 +84,21 @@ osc.addEventListener("change", sendFlags);
 function refresh() {
   fetch("/state").then(r => r.json()).then(s => {
     document.getElementById("mode").textContent = modeName[s.mode] || s.mode;
-    const cyc = s.cycle === "cycle" ? "訓練の周" : "休息";
-    document.getElementById("cyc").textContent = cyc + (s.ltm_window ? "（長期記憶の窓）" : "");
+    const rounds = s.rounds || 0;
+    let cyc = s.cycle === "cycle" ? "訓練の周（" + (rounds + 1) + "周目）" : "休息（完了 " + rounds + " 周）";
+    if (s.ltm_window) cyc += "　窓あと " + Math.max(0, Math.round(s.win_left_s)) + " 秒";
+    else if (s.cycle !== "cycle" && rounds > 0) {
+      cyc += "　休息 " + Math.round(s.rest_s) + " / " + Math.round(s.gate_s) + " 秒";
+    }
+    document.getElementById("cyc").textContent = cyc;
     cycle.textContent = s.cycle === "cycle" ? "周を終えて休む" : "周を始める";
     document.getElementById("mem").textContent =
-      "S " + s.S.toFixed(2) + "   ARM " + s.ARM.toFixed(2) + "   LTM " + s.LTM.toFixed(2);
+      "S " + s.S.toFixed(3) + "   ARM " + s.ARM.toFixed(3) + "   LTM " + s.LTM.toFixed(3);
+    const fatigue = s.phi < 0.05 ? "平常。振動の位相ではない" : "集中の疲労。振動を弱める";
+    document.getElementById("phi").textContent = "φ " + s.phi.toFixed(2) + "（" + fatigue + "）";
+    document.getElementById("dan").textContent =
+      "MP1 " + s.mp1.toFixed(2) + "   MV1 " + s.mv1.toFixed(2);
+    document.getElementById("note").textContent = s.note || "";
     document.getElementById("shocks").textContent = String(s.shocks);
     const f = s.seeing;
     document.getElementById("see").textContent =

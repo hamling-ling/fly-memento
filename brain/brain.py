@@ -9,6 +9,7 @@ import numpy as np
 from brain.constants import (
     DEFAULT_COMPRESSION,
     GAINS,
+    MEMORY,
     N_COMPARTMENTS,
     SHOCK_DECAY,
     SHOCK_DRIVE,
@@ -61,6 +62,7 @@ class Brain:
         self.shock_pending = False
         self.last_shock = -1.0e9
         self.n_shocks = 0
+        self.shock_elig = -1.0
         self.in_cycle = False
         self.cycle_start = 0.0
         self.eps_on = float(eps) > 0.0
@@ -81,6 +83,7 @@ class Brain:
         if self.t - self.last_shock < SHOCK_REFRACTORY_S:
             self.shock_pending = False
             return False
+        self.shock_elig = float(np.max(self.mb.eligibility)) if self.mb.eligibility.size else 0.0
         self.mb.us()
         self.us_ext = SHOCK_DRIVE
         self.last_shock = self.t
@@ -214,6 +217,7 @@ class Brain:
                 mode = "approach"
             else:
                 mode = "wait"
+        schedule = self._schedule()
         return {
             "mode": mode,
             "cycle": "cycle" if self.in_cycle else "rest",
@@ -226,11 +230,90 @@ class Brain:
             "ARM": traces["ARM"],
             "LTM": traces["LTM"],
             "phi": traces["phi"],
-            "ltm_window": self.bio_min < self.mb.win_until,
+            "ltm_window": schedule["window"],
+            "rounds": schedule["rounds"],
+            "rest_s": schedule["rest_s"],
+            "gate_s": schedule["gate_s"],
+            "win_left_s": schedule["win_left_s"],
+            "gap_ready": schedule["gap_ready"],
+            "mp1": float(self.dan.D[0]),
+            "mv1": float(self.dan.D[1]),
+            "shock_elig": float(self.shock_elig),
+            "note": self.operator_note(schedule),
             "avoid": avoid,
             "wheels": wheels,
             "robot_s": self.t,
         }
+
+    def _schedule(self) -> dict:
+        """Round count and the spacing clock, in robot seconds at this compression."""
+        comp = self.compression if self.compression > 0.0 else 1.0
+        rounds = len(self.mb.cycle_ends)
+        window = self.bio_min < self.mb.win_until
+        if rounds and not self.in_cycle:
+            rest_bio = self.bio_min - self.mb.cycle_ends[-1]
+        else:
+            rest_bio = 0.0
+        win_left_bio = (self.mb.win_until - self.bio_min) if window else 0.0
+        gap_bio = None
+        if self.in_cycle and rounds:
+            gap_bio = self.cycle_start - self.mb.cycle_ends[-1]
+        return {
+            "rounds": rounds,
+            "window": window,
+            "rest_s": rest_bio / comp,
+            "gate_s": MEMORY["gate"] / comp,
+            "win_s": MEMORY["win"] / comp,
+            "win_left_s": win_left_bio / comp,
+            "gap_ready": rest_bio >= MEMORY["gate"],
+            "gap_bio": gap_bio,
+        }
+
+    def operator_note(self, schedule=None) -> str:
+        """One phone-sized sentence: punish is not gated, LTM is."""
+        schedule = self._schedule() if schedule is None else schedule
+        gate_s = schedule["gate_s"]
+        win_s = schedule["win_s"]
+        rounds = schedule["rounds"]
+        parts = []
+        if 0.0 <= self.shock_elig < 0.05:
+            parts.append("直前のバツは見ていた細胞が無く、Sは増えていない。赤を見せて押す。青は罰なし。")
+        if schedule["window"]:
+            parts.append(
+                f"長期記憶の窓、あと{schedule['win_left_s']:.0f}秒。"
+                "MP1とMV1が同時に高い瞬間にLTMが増える。"
+            )
+        elif self.in_cycle and rounds == 0:
+            parts.append(
+                f"訓練の1周目。バツはSに入り、このあいだは忘却が止まる。"
+                f"終わって{gate_s:.0f}秒以上休むと、次の周の終わりにLTMの窓が開く。"
+            )
+        elif self.in_cycle and schedule["gap_bio"] is not None and schedule["gap_bio"] >= MEMORY["gate"]:
+            parts.append(
+                f"訓練の{rounds + 1}周目。この周を終えると、続く{win_s:.0f}秒でLTMが増える。"
+            )
+        elif self.in_cycle:
+            parts.append(
+                f"訓練の{rounds + 1}周目。前の休息が{gate_s:.0f}秒未満。"
+                "終えると疲労φが立ち、LTMは増えない。"
+            )
+        elif rounds == 0:
+            parts.append(
+                "休息中でもバツは効く。赤ならSとARMが増え、LTMは増えない。"
+                f"LTMには周を2回、あいだを{gate_s:.0f}秒以上空ける。"
+            )
+        elif schedule["gap_ready"]:
+            parts.append(
+                f"休息{schedule['rest_s']:.0f}秒、完了{rounds}周。間隔は足りている。"
+                f"次の周を終えると、その後{win_s:.0f}秒でLTMが増える。"
+            )
+        else:
+            left = max(0.0, gate_s - schedule["rest_s"])
+            parts.append(
+                f"休息{schedule['rest_s']:.0f}秒、完了{rounds}周。間隔まであと{left:.0f}秒。"
+                "短いと疲労になり、LTMは増えない。"
+            )
+        return "".join(parts)
 
     def state_nbytes(self) -> int:
         return (

@@ -75,8 +75,13 @@ def _busy(step, pulses, fractions, punished, mode) -> bool:
     )
 
 
-def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False):
-    """Step until ``duration`` seconds have passed, or until interrupted."""
+def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False, clock=None, on_tick=None):
+    """Step until ``duration`` seconds have passed, or until interrupted.
+
+    ``clock`` and ``on_tick`` are for tests. ``on_tick(elapsed)`` runs at the
+    start of each pass, before the camera read and the brain step.
+    """
+    clock = time if clock is None else clock
     brain = make_brain(0, compression=COMPRESSION) if brain is None else brain
     eyes = Eyes(mirror=MIRROR, gain=COLOR_GAIN) if eyes is None else eyes
     if motors is None:
@@ -84,7 +89,7 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
     lock = threading.Lock()
     page = TrainUI(brain, lock=lock, host="0.0.0.0", port=port).start()
     next_count = 0.0
-    next_tick = time.monotonic()
+    next_tick = clock.monotonic()
     pn_left = _DARK
     pn_right = _DARK
     fractions = dict(eyes.fractions)
@@ -94,11 +99,13 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
     last_mark = None
     try:
         while True:
-            now = time.monotonic()
+            now = clock.monotonic()
             if duration is not None and now - started >= duration:
                 break
+            if on_tick is not None:
+                on_tick(now - started)
             if now < next_tick:
-                time.sleep(min(0.002, next_tick - now))
+                clock.sleep(min(0.002, next_tick - now))
                 continue
             if now >= next_count:
                 pn_left, pn_right, fractions = eyes.read()
