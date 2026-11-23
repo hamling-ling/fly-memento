@@ -8,8 +8,10 @@ Run from a checkout, with ``brain/`` next to ``robot/``:
 
     python3 robot/python/main.py
 
-On the board, open ``robot/`` as the App Lab app. The sketch drives the
-wheels; this process does not.
+On the board, ``scripts/deploy_fly-memento.sh`` copies this app to
+``~/ArduinoApps/fly-memento`` and puts ``brain`` in ``python/brain``.
+The sketch drives the wheels; this process does not. State lines go to
+stdout about once a second, and faster while the robot is moving.
 """
 
 from __future__ import annotations
@@ -18,24 +20,46 @@ import os
 import sys
 import threading
 import time
-from pathlib import Path
 
-_REPO = Path(__file__).resolve().parents[2]
-if (_REPO / "brain" / "__init__.py").is_file():
-    sys.path.insert(0, str(_REPO))
-else:
-    sys.path.insert(0, str(_REPO))
+import bootstrap
+
+bootstrap.install()
 
 import numpy as np
 
 from brain.brain import make_brain
 from colors import Eyes
-from config import COLOR_GAIN, COMPRESSION, COUNT_S, MAX_CATCHUP_S, MIRROR, PORT, TICK_S
+from config import COLOR_GAIN, COMPRESSION, COUNT_S, DETAIL_S, LOG_S, MAX_CATCHUP_S, MIRROR, PORT, TICK_S
 from motors import open_motors
 from pulse import wheel_pulses
+from schedule import Next
+from trace import trace_line, trace_mark
 from train_ui import TrainUI
 
 _DARK = np.zeros(10, np.float32)
+
+
+def _mbon_triple(brain, pn) -> tuple[float, float, float]:
+    """Compartment readout for one eye, before this step writes memory."""
+    kenyon, _salience = brain.mb.kenyon(pn)
+    values = brain.mb.mbon(kenyon)
+    return (float(values[0]), float(values[1]), float(values[2]))
+
+
+def _busy(step, pulses, fractions, punished, mode) -> bool:
+    seen = max(
+        float(fractions.get("green_l", 0.0)),
+        float(fractions.get("green_r", 0.0)),
+        float(fractions.get("yellow_l", 0.0)),
+        float(fractions.get("yellow_r", 0.0)),
+    )
+    return bool(
+        punished
+        or mode != "wait"
+        or pulses != (0, 0)
+        or seen >= 0.05
+        or max(step.avoid_left, step.avoid_right) >= 0.05
+    )
 
 
 def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False):
@@ -50,7 +74,11 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
     next_tick = time.monotonic()
     pn_left = _DARK
     pn_right = _DARK
+    fractions = dict(eyes.fractions)
     started = next_tick
+    next_log = Next(LOG_S, start=started)
+    next_detail = Next(DETAIL_S, start=started)
+    last_mark = None
     try:
         while True:
             now = time.monotonic()
@@ -72,10 +100,56 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
             with lock:
                 training = brain.in_cycle
                 step = None
+                punished = False
+                # Sample MBON before the step. sense() reads it before punish
+                # writes S, and that is the avoid the wheels are about to use.
+                mbon_left = (1.0, 1.0, 1.0)
+                mbon_right = (1.0, 1.0, 1.0)
                 for _ in range(steps):
+                    mbon_left = _mbon_triple(brain, pn_left)
+                    mbon_right = _mbon_triple(brain, pn_right)
                     step = brain.step(pn_left, pn_right, TICK_S, in_train=training)
-            if step is not None:
-                motors.send(*wheel_pulses(step.wheel_left, step.wheel_right))
+                    punished = punished or bool(step.shocked)
+                status = None if step is None else brain.status()
+            if step is None or status is None:
+                continue
+            pulses = wheel_pulses(step.wheel_left, step.wheel_right)
+            motors.send(*pulses)
+            heartbeat = next_log.tick(now)
+            detail = next_detail.tick(now)
+            mark = trace_mark(
+                (step.avoid_left, step.avoid_right),
+                pulses,
+                punished,
+                status["cycle"],
+                status["mode"],
+                status["ARM"],
+                status["LTM"],
+            )
+            due = heartbeat or punished or mark != last_mark
+            busy = _busy(step, pulses, fractions, punished, status["mode"])
+            if due or (detail and busy):
+                last_mark = mark
+                line = trace_line(
+                    (float(fractions["green_l"]), float(fractions["green_r"])),
+                    (float(fractions["yellow_l"]), float(fractions["yellow_r"])),
+                    (step.avoid_left, step.avoid_right),
+                    mbon_left,
+                    mbon_right,
+                    status["S"],
+                    status["ARM"],
+                    status["LTM"],
+                    status["phi"],
+                    int(status["shocks"]),
+                    punished,
+                    (step.wheel_right, step.wheel_left),
+                    pulses,
+                    status["cycle"],
+                    status["mode"],
+                )
+                if heartbeat:
+                    line += f"  n {steps}"
+                print(line, flush=True)
     except KeyboardInterrupt:
         pass
     finally:

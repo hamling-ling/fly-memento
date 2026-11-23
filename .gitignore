@@ -224,3 +224,6 @@ __marimo__/
 
 # python -m sim writes the table and the figure here
 sim/out/
+
+# Timestamped board logs from scripts/logs_fly-memento.sh
+/logs/

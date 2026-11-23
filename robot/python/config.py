@@ -15,6 +15,11 @@ TICK_S = 0.02
 # Camera refresh. Slower than the brain, same idea as fly-car COUNT_S.
 COUNT_S = 0.10
 
+# Idle heartbeat. While colour, avoidance, or the wheels are active,
+# main.py also prints every DETAIL_S and whenever the command changes.
+LOG_S = 1.0
+DETAIL_S = 0.10
+
 # A stalled loop may catch up, but not by more than this.
 MAX_CATCHUP_S = 0.70
 

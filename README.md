@@ -2,7 +2,7 @@
 
 罰を覚える二輪の虫。ショウジョウバエのキノコ体を縮約した脳で、Arduino UNO Q の上を走る。前作 [fly-car](https://github.com/hamling-ling/fly-car) は接近と逃避だった。こちらはその後継で、緑（CS+）で受けた罰を、圧縮した「翌日」にも避ける。
 
-**English.** A two-wheel robot whose brain is a reduced fruit-fly mushroom body. The Linux side of an Arduino UNO Q reads colour and steps the neurons; the microcontroller drives the motors on D3 and D5. A phone on the same network opens a page with one punish button (バツ). The arena simulation reproduces the research result: spaced training still avoids at 72 h (PI about 70) while massed training has faded (about 45).
+**English.** A two-wheel robot whose brain is a reduced fruit-fly mushroom body. The Linux side of an Arduino UNO Q reads colour and steps the neurons; the microcontroller drives the motors on D3 and D5. A phone on the same network opens `http://<UNO Q>:8000/` and presses バツ. Deploy with `scripts/deploy_fly-memento.sh` and follow the run with `scripts/logs_fly-memento.sh`. The arena simulation reproduces the research result: spaced training still avoids at 72 h (PI about 70) while massed training has faded (about 45).
 
 ## 何をつないでいるか
 
@@ -22,6 +22,7 @@
 brain/     シミュレーションと実機が共有する脳。時間圧縮は引数
 sim/       1 m のアリーナ。分散・集中・εなし・振動子オフ
 robot/     UNO Q の App Lab アプリ（Python、バツ画面、D3/D5 のスケッチ）
+scripts/   UNO Q へ robot/ と brain/ を置き、ログを PC に残す
 docs/      数式（MODEL.md）、設計メモ、研究ログ、ポスター、アーカイブした表
 tests/     脳の決定性、状態の大きさ、バツ画面
 ```
@@ -42,15 +43,46 @@ python3 -m sim
 
 ## 実機で教える（約 30 分）
 
-UNO Q（Debian）にリポジトリごと置く。App Lab で `robot/` を開く。`brain/` は `robot/` の隣に残す。`python/main.py` はそこを import する。カメラは fly-car と同じく Linux 側。マイコンのスケッチは右車輪 D3、左車輪 D5 だけで、顔の LED はまだ無い。
+配置と起動はスクリプトで行う。PC からボードへ SSH の鍵で入れること（パスワードを訊かない `BatchMode`）。ボードは Debian の Arduino UNO Q で、`arduino-app-cli` と Docker が入っている。リポジトリのどこからでも実行でき、送り先は `arduino@uno-q-1.local`、置き場所は `~/ArduinoApps/fly-memento` である。
+
+```bash
+scripts/deploy_fly-memento.sh
+```
+
+- 別のホストへ置くとき: `scripts/deploy_fly-memento.sh arduino@<ホスト名>.local`
+- スケッチを必ず作り直すとき: `--rebuild`（`app.yaml` と `sketch/` が前回と違うときもキャッシュを消す）
+- SSH せずに、送る中身とスケッチのハッシュだけ見るとき: `--dry-run`
+
+スクリプトはアプリを止めて、`robot/`（`app.yaml`、`python/`、`sketch/`、`assets/`）をコピーし、共有の `brain/` を `python/brain` に置いてから起動する。App Lab はアプリの `python/` を import パスに入れるので、ボード上の `import brain` はそこを読む。Python だけの更新では `.cache` を残し、仮想環境とコンパイル済みのスケッチを次の起動が使う。
+
+手で起動・停止するときは SSH で入る。起動コマンドはシェルに戻る。
+
+```bash
+ssh arduino@uno-q-1.local
+arduino-app-cli app start ~/ArduinoApps/fly-memento/
+arduino-app-cli app stop ~/ArduinoApps/fly-memento/
+```
+
+`No Colon In First Item Of Depfile` と出たら、スケッチのキャッシュが壊れている。`scripts/deploy_fly-memento.sh --rebuild` で消してから起動し直す。
+
+ログは PC で取る。画面に流れ、同じ内容が `logs/fly-memento-日時.log` に残る（`logs/` は git に入らない）。Ctrl-C で切る。ファイルは残る。
+
+```bash
+scripts/logs_fly-memento.sh
+scripts/logs_fly-memento.sh arduino@<ホスト名>.local
+```
+
+止まっているときは 1 秒に 1 行。色が見えている、回避している、車輪が回っているあいだは 0.1 秒ごと。罰・パルス・周・モードが変わったときも 1 行。各行に `punish`、`avoid`、`mbon`（3 区画）、`ARM`、`LTM`、`pulse` が出る。ボード上で見る場合は `arduino-app-cli app logs ~/ArduinoApps/fly-memento/ --follow --tail 30`。
+
+スマホは同じネットワークで `http://<UNO Q のアドレス>:8000/` を開く。ページは Python 標準ライブラリが出している。起動ログに `バツ画面  http://<この機械のアドレス>:8000/` と出る。App Lab の web_ui ブリックは使っていない。脳と同じプロセスにある方が、ボタン1個には短い。
+
+リポジトリごとボードに置いて App Lab で `robot/` を開いても動く。そのときは `brain/` を `robot/` の隣に残す。スクリプトで置く場合は、隣ではなく `python/brain` に入る。カメラは fly-car と同じく Linux 側。マイコンのスケッチは右車輪 D3、左車輪 D5 だけで、顔の LED はまだ無い。
 
 ボードが無くても、車輪を送らずに画面だけ確認できる。
 
 ```bash
 python3 robot/python/main.py --dry
 ```
-
-スマホは同じネットワークで `http://<UNO Q のアドレス>:8000/` を開く。ページは Python 標準ライブラリが出している。App Lab の web_ui ブリックは使っていない。脳と同じプロセスにある方が、ボタン1個には短い。
 
 圧縮 1（標準）での分散学習は、おおよそ次の通り。生物の 24 時間がロボットの 24 分になる。
 
