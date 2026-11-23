@@ -83,6 +83,26 @@ def test_punish_page_sets_a_shock_and_the_switches():
         page.close()
 
 
+def test_dry_loop_logs_a_shock_with_traces_and_pulses(capsys):
+    from colors import Eyes
+
+    brain = make_brain(0, compression=1.0)
+    brain.mb.eligibility[:] = 1.0
+    brain.request_shock()
+    eyes = Eyes()
+    eyes.frame = _frame((0, 180, 0), (0, 180, 0))
+    motors = ListMotors()
+    run(brain=brain, eyes=eyes, motors=motors, port=0, duration=0.2, dry=True)
+    text = capsys.readouterr().out
+    assert brain.n_shocks == 1
+    assert "punish yes" in text
+    assert "mbon L:" in text
+    assert "ARM" in text and "LTM" in text
+    assert "pulse R:" in text
+    assert motors.commands[-1] == (0, 0)
+    assert any(right != 0 or left != 0 for right, left in motors.commands[:-1])
+
+
 def test_dry_loop_sends_wheel_commands_for_a_green_frame():
     brain = make_brain(0, compression=1.0)
     from colors import Eyes

@@ -1,9 +1,39 @@
 # 実機アプリ（Arduino UNO Q）
 
-`robot/` を App Lab のアプリとして開く。Linux 側がカメラと脳とバツ画面、マイコン側が車輪。
+Linux 側がカメラと脳とバツ画面、マイコン側が車輪。学習の手順はリポジトリ直下の README にある。
 
-脳のコードはリポジトリ直下の `brain/` にある。`python/main.py` は、アプリの二つ上（`robot/` の親）に `brain/` があるものとして読む。ボードへ置くときはリポジトリごと置き、`brain/` を `robot/` の隣に残す。
+## 動かし方
 
-スマホは同じネットワークから `http://<UNO Q のアドレス>:8000/` を開く。ポートは `app.yaml` の 8000。
+PC から `arduino@uno-q-1.local` へ SSH の鍵で入る。ボードに `arduino-app-cli` と Docker がある。リポジトリのどこからでも実行できる。
 
-詳細な手順はリポジトリ直下の README にある。
+```bash
+scripts/deploy_fly-memento.sh
+```
+
+- 別のホストへ置くとき: `scripts/deploy_fly-memento.sh arduino@<ホスト名>.local`
+- スケッチを必ず作り直すとき: `--rebuild`
+- 送るファイルとハッシュだけ見るとき: `--dry-run`（SSH しない）
+
+ボード上の置き場所は `~/ArduinoApps/fly-memento`。`brain/` は `python/brain` に同梱する。アプリだけでは `brain` を import できないためである。Python だけの更新では `.cache` を残し、`app.yaml` か `sketch/` が `~/ArduinoApps/fly-memento/.sketch-hash` と違うとき、または `--rebuild` のときはキャッシュを消してコンパイルする。
+
+手で起動・停止するときは SSH で入る。
+
+```bash
+ssh arduino@uno-q-1.local
+arduino-app-cli app start ~/ArduinoApps/fly-memento/
+arduino-app-cli app stop ~/ArduinoApps/fly-memento/
+```
+
+ログは PC で取る。画面に流れ、同じ内容が `logs/fly-memento-日時.log` に残る（`logs/` は git に入らない）。
+
+```bash
+scripts/logs_fly-memento.sh
+```
+
+止まっているときは 1 秒に 1 行、動いているあいだは 0.1 秒ごと。`punish`、`avoid`、`mbon`、`ARM`、`LTM`、`pulse` が出る。ボード上で見る場合は `arduino-app-cli app logs ~/ArduinoApps/fly-memento/ --follow --tail 30`。
+
+スマホは同じネットワークから `http://<UNO Q のアドレス>:8000/` を開く。ポートは `app.yaml` の 8000。画面の「バツ」が罰である。起動ログに `バツ画面` とこのポートが出る。
+
+`No Colon In First Item Of Depfile` と出たら、スケッチのキャッシュが壊れている。`--rebuild` を付けて配置し直す。
+
+チェックアウトのまま画面だけ見るときは `python3 robot/python/main.py --dry`。このときは `brain/` が `robot/` の隣にある。

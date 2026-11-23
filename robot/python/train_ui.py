@@ -39,7 +39,7 @@ class TrainUI:
 
     def start(self) -> "TrainUI":
         self._thread.start()
-        print(f"バツ画面  http://<この機械のアドレス>:{self.port}/")
+        print(f"バツ画面  http://<この機械のアドレス>:{self.port}/", flush=True)
         return self
 
     def close(self):

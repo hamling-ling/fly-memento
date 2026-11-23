@@ -59,6 +59,18 @@ fly-memento の設計メモ。式の出典と、測っていない定数の置�
 - **マイコン。** 50 Hz で届くパルスを D3/D5 のサーボ信号にする。3 秒届かなければ止める（watchdog）。左の配線は fly-car と同じく反転。m/s → パルスの倍率は fly-car のまま、床での再計測はまだ。
 - **まだ無いもの。** バンパ（D2 は空）、LED マトリクスへの DAN 表示、電源断をまたぐ LTM の保存。圧縮を 1 のまま本当の翌日まで置くなら、L と時刻を eMMC かフラッシュへ書く必要がある。
 
+### 配置とログ
+
+PC からボードへ SSH の鍵で入れる。ボード側は Debian の Arduino UNO Q で、`arduino-app-cli` と Docker が入っている。送り先の初期値は `arduino@uno-q-1.local`、置き場所は `~/ArduinoApps/fly-memento`。`scripts/deploy_fly-memento.sh` がアプリを止めて、`robot/`（`app.yaml`、`python/`、`sketch/`、`assets/`）をコピーし、`brain/` を `python/brain` に置いてから起動する。`app.yaml` と `sketch/` が前回の `~/ArduinoApps/fly-memento/.sketch-hash` と同じなら `.cache` を残す。スケッチを作り直すときは `--rebuild`。SSH せずに中身だけ見るときは `--dry-run`。
+
+```bash
+scripts/deploy_fly-memento.sh
+scripts/deploy_fly-memento.sh arduino@other.local
+scripts/logs_fly-memento.sh
+```
+
+ログは PC の `logs/fly-memento-日時.log` に残る（`logs/` は git に入らない）。罰、MBON の 3 区画、そこから出た回避、ARM、LTM、車輪パルスが、止まっているときは 1 秒に 1 行、動いているあいだは 0.1 秒ごと。バツのページは同じ LAN の `http://<UNO Q のアドレス>:8000/`。起動ログに `バツ画面` とそのポートが出る。
+
 ## シミュレーションのプロトコル
 
 `python -m sim`。圧縮は 1 に固定してある（表の時計を崩さないため）。
