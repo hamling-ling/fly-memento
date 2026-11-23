@@ -10,43 +10,92 @@
   body {
     margin: 0; font-family: sans-serif; background: #f4f1ea; color: #1d2433;
   }
-  header { padding: 16px 18px 0; }
+  header, section { padding: 16px 18px 0; }
   h1 { font-size: 22px; margin: 0 0 4px; }
-  p { margin: 0; color: #555; font-size: 14px; line-height: 1.45; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  p { margin: 0 0 8px; color: #555; font-size: 14px; line-height: 1.45; }
   button.punish {
     display: block; width: calc(100% - 28px); margin: 16px auto 8px;
-    height: 46vh; min-height: 220px; border: 0; border-radius: 28px;
-    background: #c0392b; color: white; font-size: 18vh; font-weight: 800;
+    height: 28vh; min-height: 140px; border: 0; border-radius: 28px;
+    background: #c0392b; color: white; font-size: 12vh; font-weight: 800;
     letter-spacing: 0.08em; touch-action: manipulation;
   }
   button.punish:active { background: #7b1e14; }
-  button.cycle, button:disabled { font-size: 18px; }
-  .row { display: flex; gap: 10px; padding: 0 14px; }
-  button.cycle {
-    flex: 1; height: 56px; border-radius: 14px; border: 2px solid #0d2b5c;
+  button.cycle, button.small, select, input[type="number"], input[type="text"] { font-size: 16px; }
+  .row { display: flex; gap: 10px; padding: 0 14px 8px; align-items: center; flex-wrap: wrap; }
+  button.cycle, button.small {
+    flex: 1; height: 48px; border-radius: 14px; border: 2px solid #0d2b5c;
     background: white; color: #0d2b5c; font-weight: 700; touch-action: manipulation;
   }
-  .flags { display: flex; gap: 18px; padding: 12px 18px; font-size: 16px; }
-  .flags label { display: flex; gap: 8px; align-items: center; }
+  button.small { flex: 0 0 auto; height: 40px; padding: 0 12px; }
+  button.danger { border-color: #c0392b; color: #c0392b; }
+  select, input[type="number"], input[type="text"] {
+    height: 40px; border-radius: 10px; border: 1px solid #c8c2b4; padding: 0 8px; background: white;
+  }
+  input[type="number"] { width: 4.5em; }
+  input[type="text"] { flex: 1; min-width: 8em; }
+  .flags { display: flex; gap: 18px; padding: 4px 18px 8px; font-size: 16px; }
+  .flags label, .row label { display: flex; gap: 8px; align-items: center; }
+  #banner {
+    display: none; margin: 8px 14px; padding: 16px 12px; border-radius: 18px;
+    background: #0d2b5c; color: white; text-align: center;
+  }
+  #banner.on { display: block; }
+  #banner .say { font-size: 36px; font-weight: 800; line-height: 1.2; }
+  #banner .count { font-size: 56px; font-variant-numeric: tabular-nums; font-weight: 800; }
+  #banner.red { background: #c0392b; }
+  #banner.blue { background: #1d4e89; }
+  #banner.rest, #banner.next_day { background: #3d4a3e; }
+  #banner.done { background: #1e7a46; }
+  #banner.abort { background: #6b3a2a; }
   dl {
-    margin: 0 14px 24px; background: white; border-radius: 14px;
+    margin: 8px 14px 12px; background: white; border-radius: 14px;
     padding: 12px 14px; display: grid; grid-template-columns: 8em 1fr; gap: 4px 8px;
     font-size: 15px;
   }
   dt { color: #666; }
   dd { margin: 0; font-variant-numeric: tabular-nums; }
+  ul.mem { list-style: none; margin: 0 14px 24px; padding: 0; }
+  ul.mem li {
+    display: flex; gap: 8px; align-items: center; background: white;
+    border-radius: 12px; padding: 8px 10px; margin-bottom: 6px;
+  }
+  ul.mem .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #notice { color: #c0392b; min-height: 1.2em; padding: 0 18px 8px; font-size: 14px; }
+  section.panel { padding-bottom: 4px; }
 </style>
 </head>
 <body>
 <header>
   <h1>バツ</h1>
-  <p>赤を見ているあいだに押す。見ていた細胞だけが罰を覚える。青は罰なし。1秒に1回まで。</p>
-  <p>バツは周の外でも効く。休息の表示は罰を止めていない。赤なら S と ARM が増え、LTM は増えない。LTM は、周を始めて罰し、終えて 15 秒休み、もう一周終えたあとの 10 秒で増える。</p>
+  <p id="intro">赤を見ているあいだに押す。見ていた細胞だけが罰を覚える。青は罰なし。</p>
+  <p id="guide">バツは周の外でも効く。休息の表示は罰を止めていない。</p>
 </header>
+<div id="banner">
+  <div class="say" id="say"></div>
+  <div class="count" id="count"></div>
+</div>
 <button class="punish" id="punish" type="button">バツ</button>
 <div class="row">
   <button class="cycle" id="cycle" type="button">周を始める</button>
 </div>
+<section class="panel">
+  <h2>自動の訓練</h2>
+  <div class="row">
+    <select id="kind" aria-label="手順">
+      <option value="spaced">分散</option>
+      <option value="massed">集中</option>
+      <option value="single">1回</option>
+    </select>
+    <label>周 <input id="rounds" type="number" min="1" max="20" value="5"></label>
+    <label><input id="cue" type="checkbox" checked> 音</label>
+  </div>
+  <div class="row">
+    <button class="cycle" id="auto-start" type="button">自動で始める</button>
+    <button class="cycle" id="auto-abort" type="button">中断</button>
+  </div>
+  <p id="auto-eta"></p>
+</section>
 <div class="flags">
   <label><input id="eps" type="checkbox" checked> ε（ギャップ結合）</label>
   <label><input id="osc" type="checkbox" checked> 振動子</label>
@@ -62,12 +111,33 @@
   <dt>見ている</dt><dd id="see">…</dd>
   <dt>時間</dt><dd id="time">…</dd>
 </dl>
+<section class="panel">
+  <h2>記憶の保存</h2>
+  <div class="row">
+    <input id="mem-name" type="text" placeholder="名前（空なら時刻）" maxlength="80">
+    <button class="small" id="mem-save" type="button">保存</button>
+  </div>
+  <div class="row">
+    <button class="small danger" id="mem-reset" type="button">素朴に戻す</button>
+    <label class="small">ファイルから読む
+      <input id="mem-file" type="file" accept="application/json,.json">
+    </label>
+  </div>
+  <p id="notice"></p>
+  <ul class="mem" id="mem-list"></ul>
+</section>
 <script>
 const modeName = { approach: "接近", avoid: "回避", wait: "待機" };
 const punish = document.getElementById("punish");
 const cycle = document.getElementById("cycle");
 const eps = document.getElementById("eps");
 const osc = document.getElementById("osc");
+const kind = document.getElementById("kind");
+const rounds = document.getElementById("rounds");
+const cue = document.getElementById("cue");
+const notice = document.getElementById("notice");
+let lastCue = -1;
+let audioCtx = null;
 
 punish.addEventListener("click", () => fetch("/punish", { method: "POST" }));
 cycle.addEventListener("click", () => fetch("/cycle", { method: "POST" }).then(refresh));
@@ -81,13 +151,150 @@ function sendFlags() {
 eps.addEventListener("change", sendFlags);
 osc.addEventListener("change", sendFlags);
 
+kind.addEventListener("change", () => {
+  rounds.value = kind.value === "single" ? "1" : "5";
+});
+document.getElementById("auto-start").addEventListener("click", () => {
+  unlockCue();
+  post("/protocol/start", {
+    protocol: kind.value,
+    rounds: Number(rounds.value),
+    cue: cue.checked
+  }).then(showError);
+});
+document.getElementById("auto-abort").addEventListener("click", () => {
+  post("/protocol/abort", {}).then(showError);
+});
+document.getElementById("mem-save").addEventListener("click", () => {
+  post("/memories", { name: document.getElementById("mem-name").value }).then(body => {
+    showError(body);
+    if (body && body.ok) loadList();
+  });
+});
+document.getElementById("mem-reset").addEventListener("click", () => {
+  if (!window.confirm("学習を消して、生まれたときの脳に戻します。")) return;
+  post("/reset", {}).then(body => { showError(body); refresh(); });
+});
+document.getElementById("mem-file").addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  file.text().then(text => fetch("/memories/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: text
+  })).then(r => r.json()).then(body => {
+    showError(body);
+    loadList();
+    refresh();
+  }).catch(() => { notice.textContent = "ファイルを読めませんでした。"; });
+  event.target.value = "";
+});
+
+function post(url, body) {
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }).then(r => r.json()).catch(() => ({ ok: false, error: "通信できません。" }));
+}
+function showError(body) {
+  notice.textContent = body && body.ok === false ? (body.error || "失敗しました。") : "";
+  return body;
+}
+function fmt(seconds) {
+  let s = Math.max(0, Math.ceil(Number(seconds) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return h + ":" + String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+  return m + ":" + String(sec).padStart(2, "0");
+}
+function unlockCue() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  audioCtx = audioCtx || new Ctx();
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+function beep() {
+  try {
+    if (audioCtx) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    }
+    if (navigator.vibrate) navigator.vibrate(180);
+  } catch (e) {}
+}
+function loadList() {
+  fetch("/memories").then(r => r.json()).then(body => {
+    const list = document.getElementById("mem-list");
+    list.replaceChildren();
+    (body.memories || []).forEach(item => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = item.name;
+      const load = document.createElement("button");
+      load.className = "small";
+      load.type = "button";
+      load.textContent = "読む";
+      load.addEventListener("click", () => {
+        post("/memories/" + encodeURIComponent(item.name) + "/load", {}).then(res => {
+          showError(res);
+          refresh();
+        });
+      });
+      const down = document.createElement("a");
+      down.href = "/memories/" + encodeURIComponent(item.name);
+      down.textContent = "ダウンロード";
+      const del = document.createElement("button");
+      del.className = "small danger";
+      del.type = "button";
+      del.textContent = "消す";
+      del.addEventListener("click", () => {
+        if (!window.confirm(item.name + " を消します。")) return;
+        fetch("/memories/" + encodeURIComponent(item.name), { method: "DELETE" })
+          .then(r => r.json()).then(res => { showError(res); loadList(); });
+      });
+      li.append(name, load, down, del);
+      list.append(li);
+    });
+  }).catch(() => {});
+}
+
 function refresh() {
   fetch("/state").then(r => r.json()).then(s => {
+    const t = s.timings || {};
+    document.getElementById("intro").textContent =
+      "赤を見ているあいだに押す。見ていた細胞だけが罰を覚える。青は罰なし。不応期は " +
+      Number(t.refractory_s || 0).toFixed(2) + " 秒。見せてから " +
+      Number(t.in_view_s || 0).toFixed(2) + " 秒たって、" +
+      Number(t.punish_every_s || 0).toFixed(2) + " 秒おき。";
+    document.getElementById("guide").textContent =
+      "バツは周の外でも効く。休息の表示は罰を止めていない。赤なら S と ARM が増え、LTM は増えない。" +
+      "LTM は、周を終えて " + Math.round(t.rest_spaced_s || 0) + " 秒休み、もう一周終えたあとの " +
+      Math.round(t.win_s || 0) + " 秒で増える。";
+    const roundsN = Math.max(1, Number(rounds.value) || 1);
+    const rest = kind.value === "massed" ? t.rest_massed_s : kind.value === "spaced" ? t.rest_spaced_s : 0;
+    const train = roundsN * ((t.red_s || 0) + (t.blue_s || 0)) + Math.max(0, roundsN - 1) * (rest || 0);
+    const all = train + (t.test_s || 0) + (t.day_s || 0) + (t.test_s || 0);
+    document.getElementById("auto-eta").textContent =
+      "訓練 " + fmt(train) + "、翌日テストまで " + fmt(all) +
+      "（赤 " + Math.round(t.red_s || 0) + " 秒、青 " + Math.round(t.blue_s || 0) +
+      " 秒、翌日 " + fmt(t.day_s || 0) + "）";
+
     document.getElementById("mode").textContent = modeName[s.mode] || s.mode;
-    const rounds = s.rounds || 0;
-    let cyc = s.cycle === "cycle" ? "訓練の周（" + (rounds + 1) + "周目）" : "休息（完了 " + rounds + " 周）";
+    const roundCount = s.rounds || 0;
+    let cyc = s.cycle === "cycle" ? "訓練の周（" + (roundCount + 1) + "周目）" : "休息（完了 " + roundCount + " 周）";
     if (s.ltm_window) cyc += "　窓あと " + Math.max(0, Math.round(s.win_left_s)) + " 秒";
-    else if (s.cycle !== "cycle" && rounds > 0) {
+    else if (s.cycle !== "cycle" && roundCount > 0) {
       cyc += "　休息 " + Math.round(s.rest_s) + " / " + Math.round(s.gate_s) + " 秒";
     }
     document.getElementById("cyc").textContent = cyc;
@@ -106,13 +313,28 @@ function refresh() {
       "  青 " + f.blue_l.toFixed(2) + "/" + f.blue_r.toFixed(2);
     const hours = s.bio_min / 60;
     document.getElementById("time").textContent =
-      "ロボット " + Math.round(s.robot_s) + " 秒  /  生物 " + hours.toFixed(2) + " 時間";
+      "ロボット " + Math.round(s.robot_s) + " 秒  /  生物 " + hours.toFixed(2) +
+      " 時間  /  圧縮 " + s.compression;
     if (document.activeElement !== eps) eps.checked = s.eps;
     if (document.activeElement !== osc) osc.checked = s.osc;
+
+    const p = s.protocol || {};
+    const banner = document.getElementById("banner");
+    const show = p.prompt && p.phase && p.phase !== "idle";
+    banner.className = show ? "on " + p.phase : "";
+    document.getElementById("say").textContent = show ? p.prompt : "";
+    document.getElementById("count").textContent = show && p.phase !== "done" && p.phase !== "abort"
+      ? fmt(p.left_s) : "";
+    if (p.cue && typeof p.cue_seq === "number" && p.cue_seq !== lastCue) {
+      if (lastCue >= 0) beep();
+      lastCue = p.cue_seq;
+    }
   }).catch(() => {});
 }
 refresh();
-setInterval(refresh, 1000);
+loadList();
+setInterval(refresh, 400);
+setInterval(loadList, 4000);
 </script>
 </body>
 </html>

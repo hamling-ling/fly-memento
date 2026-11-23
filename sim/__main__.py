@@ -17,6 +17,7 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
+from brain.constants import DEFAULT_COMPRESSION
 from sim.experiment import DEFAULT_CONDITIONS, TESTS, run_experiment
 from sim.figure import ORDER, write_figure
 
@@ -134,7 +135,8 @@ def main(argv=None):
         tests = TESTS
     print(
         f"seeds {args.seeds}  trials {args.trials}  "
-        f"{'quick' if args.quick else 'full'}  workers {args.workers}",
+        f"{'quick' if args.quick else 'full'}  workers {args.workers}  "
+        f"compression {DEFAULT_COMPRESSION:g}",
         flush=True,
     )
     started = time.perf_counter()

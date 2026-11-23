@@ -50,13 +50,35 @@ class DAN2:
         self.a = np.ones(2, np.float32)
         self.off = 0.0
 
-    def step(self, dt, ext=0.0):
-        drive_s, drive_a = (self.gs, self.ga) if self.osc else (0.0 * self.gs, 0.0 * self.ga)
-        gap = self.eps * (self.D[::-1] - self.D)
-        target = logi(
-            1.0 + self.off + ext + drive_s * (self.D - 1.0) - drive_a * (self.a - 1.0) + gap,
-            self.dmax,
-        )
-        self.a = self.a + dt / self.tau_a * (-self.a + self.D)
-        self.D = (self.D + dt / self.tau * (-self.D + target)).astype(np.float32)
+    def step(self, dt, ext=0.0, average=False):
+        """Explicit Euler for ``dt`` native seconds.
+
+        Native seconds are robot seconds at compression 1. The brain passes
+        ``dt_robot * compression``, which speeds the oscillator in wall-clock
+        time and leaves the biological period alone. A 50 Hz tick stays
+        stable because each piece keeps ``h / tau <= 0.25`` (the compression-1
+        step is 0.2). ``average`` returns the mean dopamine over those pieces
+        so a coarse tick still sees the same drive. One piece, which is every
+        compression-1 tick, returns ``D`` itself.
+        """
+        dt = float(dt)
+        if dt <= 0.0:
+            return self.D
+        limit = 0.25 * self.tau
+        n = 1 if dt <= limit else int(np.ceil(dt / limit - 1e-12))
+        h = dt / n
+        acc = np.zeros(2, np.float64) if average and n > 1 else None
+        for _ in range(n):
+            drive_s, drive_a = (self.gs, self.ga) if self.osc else (0.0 * self.gs, 0.0 * self.ga)
+            gap = self.eps * (self.D[::-1] - self.D)
+            target = logi(
+                1.0 + self.off + ext + drive_s * (self.D - 1.0) - drive_a * (self.a - 1.0) + gap,
+                self.dmax,
+            )
+            self.a = self.a + h / self.tau_a * (-self.a + self.D)
+            self.D = (self.D + h / self.tau * (-self.D + target)).astype(np.float32)
+            if acc is not None:
+                acc += self.D
+        if acc is not None:
+            return (acc / n).astype(np.float32)
         return self.D

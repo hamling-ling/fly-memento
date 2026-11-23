@@ -3,7 +3,9 @@
 Time compression is ``bio_min_per_robot_s``: how many biological minutes pass
 during one second of robot (or simulator) time. The research runs used 1
 (one robot-second stands for one biological minute, so 24 h is 24 min).
-A value of 5 makes the same day pass in 4.8 min.
+The default is 5, so the same day passes in 4.8 min. The oscillator,
+eligibility and shock pulse scale with it, and a 50 Hz tick is subdivided
+so each Euler piece stays the compression-1 step.
 """
 
 from brain.brain import Brain, make_brain

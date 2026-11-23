@@ -57,7 +57,12 @@ def test_deploy_dry_run_lists_the_app_and_does_not_ssh(tmp_path):
     assert "archive robot ok" in done.stdout
     assert "archive brain ok: brain/ -> python/brain" in done.stdout
     assert "ArduinoApps/fly-memento" in done.stdout
+    assert "memory dir kept: ~/fly-memento-data/memories" in done.stdout
     assert "arduino@uno-q-1.local" in done.stdout
+    script = DEPLOY.read_text(encoding="utf-8")
+    for line in script.splitlines():
+        if "fly-memento-data" in line and "rm " in line:
+            raise AssertionError(line)
     assert re.search(r"sketch hash [0-9a-f]{64}", done.stdout)
     again = _run(DEPLOY, "--dry-run", "--rebuild", "arduino@other.local", env=_path_with_fake_ssh(tmp_path))
     assert again.returncode == 0, again.stderr

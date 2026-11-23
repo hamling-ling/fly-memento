@@ -29,7 +29,7 @@ import numpy as np
 
 from brain.brain import make_brain
 from brain.wheels import drive_name
-from colors import Eyes
+from colors import FRACTION_FLOOR, Eyes
 from config import (
     COLOR_GAIN,
     COMPRESSION,
@@ -75,19 +75,27 @@ def _busy(step, pulses, fractions, punished, mode) -> bool:
     )
 
 
-def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False, clock=None, on_tick=None):
+def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False, clock=None, on_tick=None, page=None):
     """Step until ``duration`` seconds have passed, or until interrupted.
 
     ``clock`` and ``on_tick`` are for tests. ``on_tick(elapsed)`` runs at the
-    start of each pass, before the camera read and the brain step.
+    start of each pass, before the camera read and the brain step. ``page``
+    is an already built TrainUI on this same brain; the loop starts it if
+    its thread is not running, and does not close a page the caller passed in.
     """
     clock = time if clock is None else clock
     brain = make_brain(0, compression=COMPRESSION) if brain is None else brain
     eyes = Eyes(mirror=MIRROR, gain=COLOR_GAIN) if eyes is None else eyes
     if motors is None:
         motors = open_motors(dry=dry or _dry_requested())
-    lock = threading.Lock()
-    page = TrainUI(brain, lock=lock, host="0.0.0.0", port=port).start()
+    own_page = page is None
+    if page is None:
+        lock = threading.Lock()
+        page = TrainUI(brain, lock=lock, host="0.0.0.0", port=port).start()
+    else:
+        lock = page.lock
+        if not page._thread.is_alive():
+            page.start()
     next_count = 0.0
     next_tick = clock.monotonic()
     pn_left = _DARK
@@ -117,8 +125,8 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False,
             next_tick += steps * TICK_S
             if next_tick < now:
                 next_tick = now + TICK_S
+            red_seen = max(float(fractions.get("red_l", 0.0)), float(fractions.get("red_r", 0.0))) >= FRACTION_FLOOR
             with lock:
-                training = brain.in_cycle
                 step = None
                 punished = False
                 # Sample MBON before the step. sense() reads it before punish
@@ -126,9 +134,13 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False,
                 mbon_left = (1.0, 1.0, 1.0)
                 mbon_right = (1.0, 1.0, 1.0)
                 for _ in range(steps):
+                    # The protocol may open or close the round before this step.
+                    page.protocol.tick(TICK_S, red_seen)
                     mbon_left = _mbon_triple(brain, pn_left)
                     mbon_right = _mbon_triple(brain, pn_right)
-                    step = brain.step(pn_left, pn_right, TICK_S, in_train=training, bias=EXPLORE_BIAS)
+                    step = brain.step(
+                        pn_left, pn_right, TICK_S, in_train=brain.in_cycle, bias=EXPLORE_BIAS
+                    )
                     punished = punished or bool(step.shocked)
                 status = None if step is None else brain.status()
             if step is None or status is None:
@@ -182,7 +194,8 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False,
         motors.send(0, 0)
         motors.close()
         eyes.close()
-        page.close()
+        if own_page:
+            page.close()
     return brain
 
 

@@ -11,6 +11,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from brain.constants import DEFAULT_COMPRESSION
+
 # COI means from the archived 10 seed × 40 trial table (docs/results).
 ARCHIVED = {
     "spaced": {"naive": -3.5, "1h": 90.0, "3h": 88.1, "24h": 85.1, "72h": 69.7},
@@ -74,7 +76,7 @@ def write_figure(rows, extras, path: Path):
     ax.set_xticks(x)
     ax.set_xticklabels(LABELS)
     ax.set_ylabel("PI (avoid CS+)")
-    ax.set_title("Retention, COI, compression = 1")
+    ax.set_title(f"Retention, COI, compression = {DEFAULT_COMPRESSION:g}")
     ax.legend(fontsize=8)
 
     ax = axes[2]
