@@ -40,3 +40,17 @@ def motion_pulse(pulse: int) -> int:
 def wheel_pulses(v_left: float, v_right: float) -> tuple[int, int]:
     """Return ``(right, left)``, which is the order ``setMotorSpeed`` uses."""
     return motion_pulse(wheel_pulse(v_right)), motion_pulse(wheel_pulse(v_left))
+
+
+def settle_speeds(v_left: float, v_right: float, floor: float) -> tuple[float, float]:
+    """Zero a wheel quieter than ``floor`` metres per second.
+
+    The forward dead zone already drops pulses below 13. A negative speck
+    does not get that drop: ``motion_pulse`` shifts it by 36 and the wheel
+    reverses. Speeds under ``floor`` are therefore exactly 0 before that map,
+    so the log and the pins agree.
+    """
+    limit = float(floor)
+    left = 0.0 if abs(float(v_left)) < limit else float(v_left)
+    right = 0.0 if abs(float(v_right)) < limit else float(v_right)
+    return left, right

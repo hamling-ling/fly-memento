@@ -28,10 +28,23 @@ bootstrap.install()
 import numpy as np
 
 from brain.brain import make_brain
+from brain.wheels import drive_name
 from colors import Eyes
-from config import COLOR_GAIN, COMPRESSION, COUNT_S, DETAIL_S, LOG_S, MAX_CATCHUP_S, MIRROR, PORT, TICK_S
+from config import (
+    COLOR_GAIN,
+    COMPRESSION,
+    COUNT_S,
+    DETAIL_S,
+    EXPLORE_BIAS,
+    LOG_S,
+    MAX_CATCHUP_S,
+    MIRROR,
+    PORT,
+    TICK_S,
+    WHEEL_STOP_MPS,
+)
 from motors import open_motors
-from pulse import wheel_pulses
+from pulse import settle_speeds, wheel_pulses
 from schedule import Next
 from trace import trace_line, trace_mark
 from train_ui import TrainUI
@@ -108,12 +121,17 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
                 for _ in range(steps):
                     mbon_left = _mbon_triple(brain, pn_left)
                     mbon_right = _mbon_triple(brain, pn_right)
-                    step = brain.step(pn_left, pn_right, TICK_S, in_train=training)
+                    step = brain.step(pn_left, pn_right, TICK_S, in_train=training, bias=EXPLORE_BIAS)
                     punished = punished or bool(step.shocked)
                 status = None if step is None else brain.status()
             if step is None or status is None:
                 continue
-            pulses = wheel_pulses(step.wheel_left, step.wheel_right)
+            v_left, v_right = settle_speeds(step.wheel_left, step.wheel_right, WHEEL_STOP_MPS)
+            if v_left == 0.0 and v_right == 0.0:
+                source = "none"
+            else:
+                source = drive_name(pn_left, pn_right, step.avoid_left, step.avoid_right, EXPLORE_BIAS)
+            pulses = wheel_pulses(v_left, v_right)
             motors.send(*pulses)
             heartbeat = next_log.tick(now)
             detail = next_detail.tick(now)
@@ -142,10 +160,11 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
                     status["phi"],
                     int(status["shocks"]),
                     punished,
-                    (step.wheel_right, step.wheel_left),
+                    (v_right, v_left),
                     pulses,
                     status["cycle"],
                     status["mode"],
+                    source,
                 )
                 if heartbeat:
                     line += f"  n {steps}"

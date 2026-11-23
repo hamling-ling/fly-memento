@@ -29,8 +29,9 @@ GAINS = np.array([0.21, 0.46, 0.33], np.float32)
 HUES = np.arange(8, dtype=np.float64) * 45.0
 HUE_SIGMA = 30.0
 # Red is punished (CS+), blue is safe (CS−). Degrees, on the same circle as
-# HUES. 0 wraps through 360; 240 is pure blue from bgr_to_hsv (OpenCV hue
-# about 120). Camera gates are separate and wider: color_thresholds.json.
+# HUES. These are the hues passed to pn_code, not the camera measurement.
+# The camera follows fly-car's fitted window (red from 322°, blue 180–220°).
+# A pixel that passes that window is still coded here as 0° or 240°.
 CS_PLUS_HUE = 0.0
 CS_MINUS_HUE = 240.0
 

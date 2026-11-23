@@ -3,6 +3,8 @@
 The 1 Hz line is the idle heartbeat. A punish, a new pulse, or a new
 mode is printed as soon as it happens. ``wheel`` and the pulses are
 right, then left, which is the order ``setMotorSpeed`` uses.
+``drive`` names the term that survived the stop floor: ``explore``,
+``approach``, ``avoid``, or ``none``.
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ def trace_line(
     pulses: tuple[int, int],
     cycle: str,
     mode: str,
+    drive: str = "none",
 ) -> str:
     """Format one step. MBON values are the three compartments, left eye then right."""
     flag = "yes" if punished else "no"
@@ -38,7 +41,7 @@ def trace_line(
         f"S {short_term:.3f}  ARM {arm:.3f}  LTM {ltm:.3f}  phi {phi:.2f}  "
         f"shock {shocks}  punish {flag}  "
         f"wheel R:{right_v:.3f} L:{left_v:.3f}  "
-        f"pulse R:{pulse_r} L:{pulse_l}  {cycle} {mode}"
+        f"pulse R:{pulse_r} L:{pulse_l}  {cycle} {mode}  drive {drive}"
     )
 
 
