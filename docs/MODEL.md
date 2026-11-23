@@ -397,12 +397,24 @@ $$
 
 眼の明るさと回避を、それぞれ 1 で頭打ちにする。\(B=\min(1,\ 2 p_8)\)、\(\alpha=\min(1,\ y)\)。\(y\) は 3.3 の回避駆動である。\(B\) は KC の顕著性 \(s=\min(1,\ p_8/0.5)\) と同じ式である。ただし \(p_8<0.03\) のとき KC 側は \(s=0\) で回避が消える一方、車輪の \(B\) は \(p_8\) をそのまま使う。床は KC にだけ掛かる。
 
+回避の生の項は、同側を速くし反対側をその半分だけ遅くする。その対の共通成分は前進なので、左右が同じ回避だと両方の車輪が全速で前に出る。その共通成分は引いて、平均の回避に比例する後退を両輪から引く。左右の差が小さい強い回避では、さらに保持した旋回 \(s\in\{-1,0,+1\}\) を足す。\(s=+1\) は右輪を速くする（fly-car の正のヨー、左へ曲がる）。
+
 $$
-u_L = b_w + k_{\mathrm{app}} B_R (1-\alpha_R) + k_{\mathrm{av}}\alpha_L - 0.5\,k_{\mathrm{av}}\alpha_R
+r_L = k_{\mathrm{av}}\alpha_L - 0.5\,k_{\mathrm{av}}\alpha_R, \quad
+r_R = k_{\mathrm{av}}\alpha_R - 0.5\,k_{\mathrm{av}}\alpha_L
 $$
 
 $$
-u_R = b_w + k_{\mathrm{app}} B_L (1-\alpha_L) + k_{\mathrm{av}}\alpha_R - 0.5\,k_{\mathrm{av}}\alpha_L
+c = (r_L+r_R)/2, \quad
+\rho = k_{\mathrm{ret}}\,(\alpha_L+\alpha_R)/2
+$$
+
+$$
+u_L = b_w + k_{\mathrm{app}} B_R (1-\alpha_R) + (r_L - c) - \rho - k_{\mathrm{spin}} s
+$$
+
+$$
+u_R = b_w + k_{\mathrm{app}} B_L (1-\alpha_L) + (r_R - c) - \rho + k_{\mathrm{spin}} s
 $$
 
 $$
@@ -410,7 +422,7 @@ v_L = \mathrm{clip}(u_L,\ -1,\ 1)\,v_{\max}, \quad
 v_R = \mathrm{clip}(u_R,\ -1,\ 1)\,v_{\max}
 $$
 
-\(b_w=0.35\)、\(k_{\mathrm{app}}=1\)、\(k_{\mathrm{av}}=2.5\)、\(v_{\max}=0.06\,\mathrm{m/s}\) である。右が明るいと左が速くなり、光の方へ曲がる。回避は同側を速くし、反対側をその半分だけ遅くする。出典: `wheel_speeds`。`DESIGN.md` が書く \(b=0.35\)、\(k_A=1\)、\(k_V=2.5\) は、この \(b_w\)、\(k_{\mathrm{app}}\)、\(k_{\mathrm{av}}\) である。記憶の \(k_A=1/30\) とは別の記号である。
+\(b_w=0.35\)、\(k_{\mathrm{app}}=1\)、\(k_{\mathrm{av}}=2.5\)、\(k_{\mathrm{ret}}=1.25\)、\(k_{\mathrm{spin}}=0.7\)、\(v_{\max}=0.06\,\mathrm{m/s}\) である。右が明るいと左が速くなり、光の方へ曲がる。回避が片側だけ強いと、その側の車輪が速くなり、色からそれる。左右が揃って強いと前進が落ち、後退しながら曲がる。出典: `wheel_speeds`、`update_avoid_spin`。`DESIGN.md` が書く \(b=0.35\)、\(k_A=1\)、\(k_V=2.5\) は、この \(b_w\)、\(k_{\mathrm{app}}\)、\(k_{\mathrm{av}}\) である。記憶の \(k_A=1/30\) とは別の記号である。\(s\) は平均回避が 0.35 未満なら 0。差の絶対値が 0.25 以上なら微分の旋回に任せ、符号だけ覚える。それより狭いあいだは、覚えた符号を出し続ける。最初の選択は +1。
 
 シミュレーションは \(b_w=0.35\) のままである。暗いときの指令は \(0.35\times 0.06=0.021\,\mathrm{m/s}\) で、パルスにすると 17 になり、前進の不感帯 13 より上に残る。実機はこの項を渡さない。`robot/python/config.py` の `EXPLORE_BIAS` が `wheel_speeds` の `bias` で、既定は 0 である。fly-car にも、ターゲットが無いときの基準駆動は無い。0 にすると色が無いときの指令は 0 である。0.35 に戻すと、上のパルス 17 の前進が戻る。探索のためのつまみであり、既定では切ってある。
 

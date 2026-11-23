@@ -9,7 +9,7 @@ from brain.coding import pn_code
 from brain.constants import CS_PLUS_HUE, N_KC
 from brain.dan import DAN2
 from brain.sets import OSC_SETS
-from brain.wheels import wheel_speeds
+from brain.wheels import update_avoid_spin, wheel_speeds
 
 
 def _dark():
@@ -129,3 +129,42 @@ def test_approach_is_crossed():
     right[8] = 0.5
     left_speed, right_speed = wheel_speeds(dark, right, 0.0, 0.0)
     assert left_speed > right_speed
+
+
+def _both_bright():
+    view = _dark()
+    view[8] = 0.5
+    return view
+
+
+def test_symmetric_avoidance_backs_away_and_turns():
+    view = _both_bright()
+    left, right = wheel_speeds(view, view, 0.8, 0.8, bias=0.0, spin=1.0)
+    assert 0.5 * (left + right) <= 0.0
+    assert left != right
+    # The held spin is a left turn: the right wheel is the faster one.
+    assert right > left
+    stored, applied = update_avoid_spin(0.0, 0.8, 0.8)
+    assert (stored, applied) == (1.0, 1.0)
+    # A small wobble does not flip the remembered turn.
+    held, still = update_avoid_spin(stored, 0.85, 0.75)
+    assert (held, still) == (1.0, 1.0)
+    # A clear imbalance is left to the differential and remembered the other way.
+    flipped, quiet = update_avoid_spin(held, 0.9, 0.2)
+    assert (flipped, quiet) == (-1.0, 0.0)
+
+
+def test_one_sided_avoidance_turns_away():
+    view = _both_bright()
+    # Avoidance on the right eye. The right wheel must end up faster, which
+    # is a left turn, away from that eye.
+    left, right = wheel_speeds(view, view, 0.1, 0.8, bias=0.0)
+    assert right > left
+    assert 0.5 * (left + right) < 0.06
+
+
+def test_naive_red_still_approaches():
+    view = _both_bright()
+    left, right = wheel_speeds(view, view, 0.0, 0.0, bias=0.0)
+    assert left > 0.0 and right > 0.0
+    assert abs(left - right) < 1e-9

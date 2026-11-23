@@ -17,6 +17,7 @@ from colors import (
     RED_H_LOW,
     RED_H_WRAP,
     REGION_MIN_FRACTION,
+    Eyes,
     _large_regions,
     eye_fractions,
     pn_from_fractions,
@@ -245,9 +246,171 @@ def test_punish_page_sets_a_shock_and_the_switches():
         page.close()
 
 
-def test_dry_loop_logs_a_shock_with_traces_and_pulses(capsys):
-    from colors import Eyes
+class _Clock:
+    def __init__(self):
+        self.t = 0.0
 
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, dt):
+        self.t += float(dt)
+
+
+def _drive(brain, eyes, events, duration):
+    """The Linux loop, with a virtual clock and the phone buttons."""
+    pending = list(events)
+    phase = []
+
+    def on_tick(elapsed):
+        while pending and pending[0][0] <= elapsed + 1e-9:
+            _when, action, payload = pending.pop(0)
+            if action == "frame":
+                eyes.frame = _solid((0, 0, 0) if payload is None else payload)
+            elif action == "punish":
+                brain.request_shock()
+            elif action == "cycle":
+                brain.toggle_cycle()
+        if not phase or elapsed - phase[-1][0] >= 0.5:
+            phase.append((elapsed, float(brain.dan.D[0]), float(brain.mb.L.mean()), float(brain.mb.S.mean()), float(brain.mb.A.mean()), float(brain.mb.phi)))
+
+    run(
+        brain=brain,
+        eyes=eyes,
+        motors=ListMotors(),
+        port=0,
+        duration=duration,
+        dry=True,
+        clock=_Clock(),
+        on_tick=on_tick,
+    )
+    return phase
+
+
+def _rounds(gap):
+    """Five rounds. Red is punished, blue is shown and not punished.
+
+    gap is None when the round button is never pressed. Otherwise it is the
+    rest, in robot seconds, after 周を終えて休む.
+    """
+    events = []
+    t = 0.0
+    for _ in range(5):
+        if gap is not None:
+            events.append((t, "cycle", None))
+        events.append((t, "frame", PAPER_RED))
+        events.append((t + 1.0, "punish", None))
+        events.append((t + 1.5, "frame", PAPER_BLUE))
+        if gap is None:
+            events.append((t + 3.0, "frame", None))
+            t += 3.5
+        else:
+            events.append((t + 3.0, "frame", None))
+            events.append((t + 3.0, "cycle", None))
+            t += 3.0 + gap
+    return events, t
+
+
+def test_punish_outside_a_round_is_not_ignored():
+    brain = make_brain(1, compression=1.0)
+    page = TrainUI(brain, host="127.0.0.1", port=0).start()
+    try:
+        base = f"http://127.0.0.1:{page.port}"
+        html = urllib.request.urlopen(base + "/", timeout=2).read().decode()
+        assert "周の外でも効く" in html
+        assert "赤" in html and "青" in html
+        assert brain.in_cycle is False
+        brain.mb.eligibility[:] = 1.0
+        urllib.request.urlopen(urllib.request.Request(base + "/punish", method="POST"), timeout=2)
+        brain.step(pn_code([0.5], [CS_PLUS_HUE]), pn_code([0.5], [CS_PLUS_HUE]), 0.02, in_train=brain.in_cycle)
+        state = json.loads(urllib.request.urlopen(base + "/state", timeout=2).read())
+    finally:
+        page.close()
+    assert state["cycle"] == "rest"
+    assert state["rounds"] == 0
+    assert state["shocks"] == 1
+    assert state["S"] > 0.1
+    assert state["LTM"] == 0.0
+    assert "休息中でもバツは効く" in state["note"]
+    assert "mp1" in state and "mv1" in state
+
+
+def test_paper_red_without_a_round_writes_arm_and_not_ltm():
+    # 5x (red paper 1.5 s, バツ at 1 s, blue 1.5 s). No round button.
+    fill = eye_fractions(_solid(PAPER_RED))
+    assert fill["red_l"] == 1.0
+    assert fill["red_l"] >= FRACTION_FLOOR
+    assert eye_fractions(_solid(_bgr(0, 255, 255)))["red_l"] == 0.0
+    brain = make_brain(1, compression=1.0)
+    events, end = _rounds(None)
+    phase = _drive(brain, Eyes(), events, end + 12.0)
+    status = brain.status()
+    assert brain.n_shocks == 5
+    assert status["cycle"] == "rest"
+    assert status["mode"] == "wait"
+    assert status["S"] > 0.01
+    assert status["ARM"] > 0.005
+    assert status["LTM"] == 0.0
+    assert status["phi"] == 0.0
+    assert status["shock_elig"] >= 0.05
+    assert "休息中でもバツは効く" in status["note"]
+    swing = max(sample[1] for sample in phase) - min(sample[1] for sample in phase)
+    assert swing > 1.0
+
+
+def test_spaced_red_writes_ltm_and_a_short_rest_does_not():
+    spaced = make_brain(1, compression=1.0)
+    spaced_events, _end = _rounds(15.0)
+    early = {"ltm": None}
+    pending = list(spaced_events)
+    phase = []
+
+    def on_tick(elapsed, brain=spaced, eyes=None):
+        while pending and pending[0][0] <= elapsed + 1e-9:
+            _when, action, payload = pending.pop(0)
+            if action == "frame":
+                eyes.frame = _solid((0, 0, 0) if payload is None else payload)
+            elif action == "punish":
+                brain.request_shock()
+            elif action == "cycle":
+                brain.toggle_cycle()
+        # Still in the first rest: round 2 has not started, so no window yet.
+        if elapsed >= 17.0 and early["ltm"] is None:
+            early["ltm"] = float(brain.mb.L.mean())
+        if not phase or elapsed - phase[-1][0] >= 0.5:
+            phase.append((elapsed, float(brain.dan.D[0]), float(brain.mb.L.mean())))
+
+    eyes = Eyes()
+    run(
+        brain=spaced,
+        eyes=eyes,
+        motors=ListMotors(),
+        port=0,
+        duration=90.0,
+        dry=True,
+        clock=_Clock(),
+        on_tick=lambda elapsed: on_tick(elapsed, eyes=eyes),
+    )
+    assert early["ltm"] == 0.0
+    status = spaced.status()
+    assert status["rounds"] == 5
+    assert status["LTM"] > 0.003
+    assert status["phi"] < 0.01
+    assert "長期記憶の窓" in status["note"] or status["LTM"] > 0.003
+    assert max(sample[1] for sample in phase) - min(sample[1] for sample in phase) > 1.0
+
+    massed = make_brain(1, compression=1.0)
+    massed_events, massed_end = _rounds(2.0)
+    _drive(massed, Eyes(), massed_events, massed_end + 1.0)
+    massed_status = massed.status()
+    assert massed_status["rounds"] == 5
+    assert massed_status["LTM"] == 0.0
+    assert massed_status["phi"] > 0.9
+    assert massed_status["S"] > 0.01
+    assert "疲労" in massed_status["note"]
+
+
+def test_dry_loop_logs_a_shock_with_traces_and_pulses(capsys):
     brain = make_brain(0, compression=1.0)
     brain.mb.eligibility[:] = 1.0
     brain.request_shock()
@@ -270,8 +433,6 @@ def test_dry_loop_logs_a_shock_with_traces_and_pulses(capsys):
 
 def test_dry_loop_sends_wheel_commands_for_a_red_frame():
     brain = make_brain(0, compression=1.0)
-    from colors import Eyes
-
     eyes = Eyes()
     eyes.frame = _solid(PAPER_RED)
     motors = ListMotors()
