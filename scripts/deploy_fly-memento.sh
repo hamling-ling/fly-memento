@@ -24,6 +24,10 @@
 # --jpeg switch.
 #
 # Run from anywhere. The default host matches scripts/logs_fly-memento.sh.
+#
+# Learned memories are ~/fly-memento-data/memories, outside the app
+# directory. This script never deletes that tree. A redeploy replaces
+# ~/ArduinoApps/fly-memento and leaves the saved brains where they are.
 
 set -euo pipefail
 
@@ -49,6 +53,15 @@ if [[ ! "$remote" =~ ^[A-Za-z0-9_./-]+$ ]]; then
   echo "remote path rejected" >&2
   exit 1
 fi
+# Refuse to point the deploy at the memory tree. The rm calls below only
+# ever expand under ~/$remote.
+case "$remote" in
+  fly-memento-data|fly-memento-data/*)
+    echo "refusing to deploy onto the memory directory" >&2
+    exit 1
+    ;;
+esac
+echo "memory dir kept: ~/fly-memento-data/memories"
 
 sketch_hash=$(
   tar -C "$root/robot" \

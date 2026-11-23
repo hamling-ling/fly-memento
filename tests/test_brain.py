@@ -82,7 +82,9 @@ def test_compression_is_bio_minutes_per_robot_second():
 
 
 def test_spacing_opens_the_ltm_window_and_massed_sets_fatigue():
-    spaced = make_brain(0)
+    # Times below are written in robot seconds and read back as biological
+    # minutes, so this case is the compression-1 clock on purpose.
+    spaced = make_brain(0, compression=1.0)
     spaced.begin_cycle()
     spaced.t = 10.0
     spaced.end_cycle()
@@ -94,7 +96,7 @@ def test_spacing_opens_the_ltm_window_and_massed_sets_fatigue():
     assert spaced.mb.win_until == pytest.approx(50.0)
     assert spaced.mb.phi == 0.0
 
-    massed = make_brain(0)
+    massed = make_brain(0, compression=1.0)
     massed.begin_cycle()
     massed.t = 10.0
     massed.end_cycle()

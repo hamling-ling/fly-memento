@@ -12,7 +12,36 @@ from __future__ import annotations
 import numpy as np
 
 # Biological minutes elapsed per robot-second. 1 → 1 h = 1 robot-minute.
-DEFAULT_COMPRESSION = 1.0
+# This is the only compression knob. The robot re-exports it as
+# ``config.COMPRESSION``. The oscillator, eligibility, shock pulse and
+# refractory all divide by it, so one biological minute is the same
+# trajectory at every value. ``robot_seconds`` turns the protocol below
+# into wall-clock seconds.
+# 5 is the largest of 2, 3, 5 whose spaced and massed traces stay with the
+# compression-1 run (see sim/scale_check.py). 24 biological hours is 4.8 min.
+DEFAULT_COMPRESSION = 5.0
+
+# Protocol lengths in biological minutes. At compression 1 they are the
+# historical robot-second timings (20 s of colour, 15 s spaced rest, …).
+PROTOCOL = dict(
+    red=20.0,
+    blue=20.0,
+    punish_every=1.2,
+    in_view=1.0,
+    rest_spaced=15.0,
+    rest_massed=2.0,
+    rest_single=0.0,
+    test=45.0,
+    next_day=24.0 * 60.0,
+)
+
+
+def robot_seconds(bio_min: float, compression: float) -> float:
+    """Wall-clock seconds for a biological duration at this compression."""
+    comp = float(compression)
+    if not comp > 0.0:
+        comp = 1.0
+    return float(bio_min) / comp
 
 N_KC = 100
 N_PN = 9

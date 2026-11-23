@@ -1,9 +1,9 @@
 """Spaced and massed training in the arena, then retention tests.
 
-One worker is one (protocol, manipulation, seed). The biological clock runs
-at 1 min per robot-second, which is the compression used for the archived
-table. A 72 h test is 72 min of simulated robot time and a few seconds of
-wall time, because the parked robot only integrates the oscillator.
+One worker is one (protocol, manipulation, seed). Durations below are
+biological minutes. Robot time is that divided by compression, and the
+arena paces the body by the same factor, so the path length matches
+compression 1. A 72 h test is 72 biological minutes.
 """
 
 from __future__ import annotations
@@ -14,17 +14,21 @@ import numpy as np
 
 from brain.brain import make_brain
 from brain.coding import pn_code
-from brain.constants import CS_MINUS_HUE, CS_PLUS_HUE
+from brain.constants import CS_MINUS_HUE, CS_PLUS_HUE, DEFAULT_COMPRESSION, PROTOCOL
 from sim.arena import LX, LY, Agent, World
 
-PROTOCOLS = {"1x": (1, 0.0), "massed": (5, 2.0), "spaced": (5, 15.0)}
+PROTOCOLS = {
+    "1x": (1, PROTOCOL["rest_single"]),
+    "massed": (5, PROTOCOL["rest_massed"]),
+    "spaced": (5, PROTOCOL["rest_spaced"]),
+}
 MANIPULATIONS = {
     "WT": {},
     "eps0": {"eps": 0.0},
     "osc_off": {"osc_on": False},
     "no_learn": {"learn": False},
 }
-# Robot-seconds after training. At compression 1 these are biological minutes.
+# Biological minutes after training. Robot time is these divided by compression.
 TESTS = [(60, "1h"), (180, "3h"), (1440, "24h"), (4320, "72h")]
 DEFAULT_CONDITIONS = [
     (protocol, manip)
@@ -39,8 +43,21 @@ def _preference(result) -> float:
     return 100.0 * (chosen_minus - chosen_plus) / max(1, chosen_minus + chosen_plus)
 
 
-def test_agent(agent, n=20, seconds=45.0, record_first=False):
-    """Frozen-brain clones. CS+ side alternates. PI > 0 means the robot avoids CS+."""
+def _pace(brain) -> float:
+    comp = float(brain.compression)
+    return comp if comp > 0.0 else 1.0
+
+
+def test_agent(agent, n=20, seconds=None, record_first=False):
+    """Frozen-brain clones. CS+ side alternates. PI > 0 means the robot avoids CS+.
+
+    ``seconds`` is biological minutes of driving (45, the arena's choice
+    window). The call is shortened by compression; the body pace puts the
+    distance back.
+    """
+    if seconds is None:
+        seconds = PROTOCOL["test"]
+    pace = _pace(agent.brain)
     n_plus = n_minus = n_none = 0
     trajs = []
     for k in range(n):
@@ -52,7 +69,7 @@ def test_agent(agent, n=20, seconds=45.0, record_first=False):
         record = record_first and k == 0
         result = clone.drive(
             World(lights),
-            seconds,
+            seconds / pace,
             record=record,
             stop_on_choice=True,
         )
@@ -70,8 +87,14 @@ def test_agent(agent, n=20, seconds=45.0, record_first=False):
 
 
 def train(agent, protocol, record=False):
-    """CS+ with a shock bar, then CS− without one. Gaps are robot-seconds."""
+    """CS+ with a shock bar, then CS− without one.
+
+    Trial length and the gap are biological minutes. Robot time is that
+    divided by compression.
+    """
     n_cycles, gap = PROTOCOLS[protocol]
+    pace = _pace(agent.brain)
+    trial = PROTOCOL["red"] / pace
     log = []
     trajs = []
     for cycle in range(n_cycles):
@@ -83,7 +106,7 @@ def train(agent, protocol, record=False):
             agent.reset_pose()
             result = agent.drive(
                 World([(0.0, LY, hue)], bar=bar),
-                20.0,
+                trial,
                 in_train=True,
                 record=record and name == "A" and cycle == 0,
             )
@@ -92,7 +115,7 @@ def train(agent, protocol, record=False):
                 trajs.append(result["traj"])
         agent.brain.mb.end_cycle(t0, agent.brain.bio_min)
         if cycle < n_cycles - 1 and gap > 0.0:
-            agent.brain.idle(gap)
+            agent.brain.idle(gap / pace)
     return log, trajs
 
 
@@ -102,14 +125,14 @@ def _kenyon_mask(brain):
 
 
 def run_job(task):
-    protocol, manip, seed, n_trials, tests, record = task
+    protocol, manip, seed, n_trials, tests, record, compression = task
     options = MANIPULATIONS[manip]
     brain = make_brain(
         seed,
         eps=options.get("eps", 0.1),
         osc_on=options.get("osc_on", True),
         learn=options.get("learn", True),
-        compression=1.0,
+        compression=compression,
     )
     agent = Agent(brain)
     mask = _kenyon_mask(brain)
@@ -141,10 +164,11 @@ def run_job(task):
     if record:
         extra["train"] = train_traj
         extra["naive"] = naive["trajs"]
-    elapsed = 0
+    elapsed = 0.0
+    pace = _pace(brain)
     bumps = [bumps for _c, name, bumps in log if name == "A"]
     for t_after, label in tests:
-        agent.brain.idle(t_after - elapsed)
+        agent.brain.idle((t_after - elapsed) / pace)
         elapsed = t_after
         result = test_agent(agent, n=n_trials, record_first=record and label == "72h")
         record_row(label, t_after, result)
@@ -155,14 +179,23 @@ def run_job(task):
     return rows, extra
 
 
-def run_experiment(seeds=4, trials=12, conditions=None, tests=None, workers=4, progress=True):
+def run_experiment(
+    seeds=4,
+    trials=12,
+    conditions=None,
+    tests=None,
+    workers=4,
+    progress=True,
+    compression=None,
+):
     conditions = DEFAULT_CONDITIONS if conditions is None else conditions
     tests = TESTS if tests is None else tests
+    compression = DEFAULT_COMPRESSION if compression is None else float(compression)
     tasks = []
     for protocol, manip in conditions:
         for seed in range(seeds):
             record = seed == 0 and manip == "WT" and protocol in ("spaced", "massed")
-            tasks.append((protocol, manip, seed, trials, tests, record))
+            tasks.append((protocol, manip, seed, trials, tests, record, compression))
     rows = []
     extras = {}
     if workers <= 1 or len(tasks) == 1:
@@ -185,3 +218,65 @@ def run_experiment(seeds=4, trials=12, conditions=None, tests=None, workers=4, p
             if progress:
                 print(f"  {task[0]} {task[1]} seed {task[2]}", flush=True)
     return rows, extras
+
+
+def scripted_retention(seed, protocol, compression, horizons=(0.0, 60.0, 1440.0, 4320.0)):
+    """Hold the colour still and punish on the operator schedule.
+
+    No arena noise, so two compressions can be compared past the path
+    noise. ``horizons`` are biological minutes after the last cycle.
+    Each row has the all-cell means (what the phone shows) and the means
+    over the cells that answer to red.
+    """
+    n_cycles, gap = PROTOCOLS[protocol]
+    comp = float(compression) if float(compression) > 0.0 else 1.0
+    brain = make_brain(seed, compression=comp)
+    red = pn_code([0.5], [CS_PLUS_HUE])
+    blue = pn_code([0.5], [CS_MINUS_HUE])
+    dt = 0.02
+    interval = PROTOCOL["punish_every"] / comp
+    first = PROTOCOL["in_view"] / comp
+
+    def hold(view, bio_min, punish):
+        steps = int(round((bio_min / comp) / dt))
+        next_at = first
+        for i in range(steps):
+            now = i * dt
+            if punish and now + 1e-8 >= next_at:
+                brain.request_shock()
+                next_at += interval
+            brain.step(view, view, dt, in_train=True)
+
+    for cycle in range(n_cycles):
+        brain.begin_cycle()
+        hold(red, PROTOCOL["red"], True)
+        hold(blue, PROTOCOL["blue"], False)
+        brain.end_cycle()
+        if cycle < n_cycles - 1 and gap > 0.0:
+            brain.idle(gap / comp)
+
+    def take(horizon):
+        masked = brain.traces(red_kenyon)
+        full = brain.traces(None)
+        return {
+            "horizon": horizon,
+            "S": full["S"],
+            "ARM": full["ARM"],
+            "LTM": full["LTM"],
+            "S_on": masked["S"],
+            "ARM_on": masked["ARM"],
+            "LTM_on": masked["LTM"],
+            "phi": float(brain.mb.phi),
+            "shocks": int(brain.n_shocks),
+            "bio_min": float(brain.bio_min),
+        }
+
+    red_kenyon, _salience = brain.mb.kenyon(red)
+    rows = []
+    elapsed = 0.0
+    for horizon in horizons:
+        if horizon > elapsed:
+            brain.idle((horizon - elapsed) / comp)
+            elapsed = horizon
+        rows.append(take(horizon))
+    return rows

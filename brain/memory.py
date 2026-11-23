@@ -90,9 +90,22 @@ class MB:
         if gap is not None and gap < MEMORY["gate"]:
             self.phi = 1.0
 
-    def step_mem(self, dt_bio, t_bio, forgetting, coincidence, in_train=False, kenyon=None, dt_robot=None):
-        if kenyon is not None:
-            self.eligibility += dt_robot / MEMORY["tau_e"] * (kenyon - self.eligibility)
+    def step_mem(
+        self,
+        dt_bio,
+        t_bio,
+        forgetting,
+        coincidence,
+        in_train=False,
+        kenyon=None,
+        dt_robot=None,
+        compression=1.0,
+    ):
+        # tau_e is 2 biological minutes. At compression 1 that is 2 robot
+        # seconds, which is what this line used to divide by.
+        if kenyon is not None and dt_robot is not None:
+            comp = compression if compression > 0.0 else 1.0
+            self.eligibility += (dt_robot * comp) / MEMORY["tau_e"] * (kenyon - self.eligibility)
         self.z_slow += dt_bio / MEMORY["tau_z"] * (coincidence - self.z_slow)
         arm_from_s = (
             MEMORY["kA"]

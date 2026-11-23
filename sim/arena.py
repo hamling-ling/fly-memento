@@ -66,7 +66,16 @@ class Agent:
         bumps = 0
         last_bump = -9.0
         choice = None
-        steps = int(round(seconds / dt))
+        # ``seconds`` is robot time. The caller has already divided the
+        # trial by compression. The body still takes compression-1 sized
+        # steps (``dt`` of motion), so the path and the noise draws match
+        # and only the robot clock runs faster. At compression 1 this is
+        # the original loop.
+        pace = float(self.brain.compression)
+        if not pace > 0.0:
+            pace = 1.0
+        body_dt = dt / pace
+        steps = int(round(seconds / body_dt))
         for i in range(steps):
             pn_left, pn_right = eye_intensity(self.pos, self.heading, world.lights, self.rng)
             _al, _ar, wheel_left, wheel_right = self.brain.sense(pn_left, pn_right)
@@ -85,11 +94,11 @@ class Agent:
             width, height = world.size
             new = np.clip(new, [-width / 2, -height / 2], [width / 2, height / 2])
             self.pos = new
-            if hit and self.brain.t - last_bump >= 1.0:
+            if hit and self.brain.t - last_bump >= self.brain.refractory_s:
                 self.brain.request_shock()
                 bumps += 1
                 last_bump = self.brain.t
-            step = self.brain.integrate(dt, in_train=in_train)
+            step = self.brain.integrate(body_dt, in_train=in_train)
             if record and i % 5 == 0:
                 trace.append((self.brain.t, self.pos[0], self.pos[1], self.heading, step.avoid_left, step.avoid_right, float(hit)))
             if choice is None and world.bar is None:

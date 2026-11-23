@@ -5,6 +5,12 @@
 # them. The arena unicycle keeps brain.constants.TRACK (0.12 m).
 from brain.constants import CHASSIS_REAR_TRACK_M as REAR_TRACK_M
 from brain.constants import CHASSIS_WHEELBASE_M as WHEELBASE_M
+
+# Biological minutes per robot-second. The single knob is
+# brain.constants.DEFAULT_COMPRESSION; this name is what the robot reads.
+# 5 → 24 h is 4.8 min, and the oscillator is scaled so the biological
+# trajectory matches compression 1.
+from brain.constants import DEFAULT_COMPRESSION as COMPRESSION
 from pulse import CRUISE_MPS, CRUISE_PULSE, FORWARD_START
 
 # Picture left is the robot's right when this is True.
@@ -26,9 +32,6 @@ MAX_CATCHUP_S = 0.70
 
 # Phone page. App Lab must publish this port (see app.yaml).
 PORT = 8000
-
-# Biological minutes per robot-second. 1 → 24 h is 24 min. 5 → 24 h is 4.8 min.
-COMPRESSION = 1.0
 
 # How strongly a filled eye drives the projection neurons.
 # 1.0 means "this colour fills the eye" has intensity 1, which is brighter

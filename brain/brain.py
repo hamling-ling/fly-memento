@@ -11,10 +11,13 @@ from brain.constants import (
     GAINS,
     MEMORY,
     N_COMPARTMENTS,
+    PROTOCOL,
     SHOCK_DECAY,
     SHOCK_DRIVE,
     SHOCK_REFRACTORY_S,
+    robot_seconds,
 )
+from brain.snapshot import dump, load
 from brain.dan import DAN2
 from brain.memory import MB
 from brain.sets import NORMS, OSC_SETS
@@ -45,6 +48,7 @@ class Brain:
         learn=True,
         compression=DEFAULT_COMPRESSION,
     ):
+        self.seed = int(seed)
         self.rng = np.random.default_rng(seed)
         self.mb = MB(
             np.random.default_rng(int(seed) + 1000),
@@ -70,6 +74,9 @@ class Brain:
         self.last: Step | None = None
         self._seen = None
         self.avoid_spin = 0.0
+        # Birth snapshot for 「素朴に戻す」. Taken after the wiring and the
+        # initial oscillator draw, before any learning.
+        self._naive = dump(self)
 
     @property
     def bio_min(self) -> float:
@@ -79,9 +86,14 @@ class Brain:
         """Ask for a US on the next step. The 1 s refractory is applied there."""
         self.shock_pending = True
 
+    @property
+    def refractory_s(self) -> float:
+        """Shock refractory in robot seconds. One biological minute at any compression."""
+        return robot_seconds(SHOCK_REFRACTORY_S, self.compression)
+
     def punish(self) -> bool:
         """Deliver the shock now. False when the refractory period has not elapsed."""
-        if self.t - self.last_shock < SHOCK_REFRACTORY_S:
+        if self.t - self.last_shock < self.refractory_s:
             self.shock_pending = False
             return False
         self.shock_elig = float(np.max(self.mb.eligibility)) if self.mb.eligibility.size else 0.0
@@ -141,17 +153,33 @@ class Brain:
         """
         pn_left, pn_right, avoid_left, avoid_right, kenyon_left, kenyon_right, left, right = self._seen
         shocked = self.punish() if self.shock_pending else False
-        forgetting, coincidence = self._signals(dt)
-        self.mb.step_mem(
-            dt * self.compression,
-            self.bio_min,
-            forgetting,
-            coincidence,
-            in_train=in_train,
-            kenyon=np.maximum(kenyon_left, kenyon_right),
-            dt_robot=dt,
-        )
-        self.t += dt
+        # Subdivide so each Euler piece is at most one compression-1 tick
+        # (0.02 biological minutes). A 50 Hz tick at compression 5 is five
+        # pieces with h/tau = 0.2. A shorter arena step whose biological
+        # length is already 0.02 is one piece. Compression 1 is the original
+        # update.
+        comp = self.compression if self.compression > 0.0 else 1.0
+        bio = dt * comp
+        nominal = 0.02
+        n = 1 if dt <= 0.0 or bio <= nominal * (1.0 + 1e-9) else int(np.ceil(bio / nominal - 1e-12))
+        h_robot = dt / n
+        h_bio = bio / n
+        kenyon = np.maximum(kenyon_left, kenyon_right)
+        forgetting = np.zeros(N_COMPARTMENTS, np.float32)
+        coincidence = 0.0
+        for _ in range(n):
+            forgetting, coincidence = self._signals(h_robot)
+            self.mb.step_mem(
+                h_bio,
+                self.bio_min,
+                forgetting,
+                coincidence,
+                in_train=in_train,
+                kenyon=kenyon,
+                dt_robot=h_robot,
+                compression=comp,
+            )
+            self.t += h_robot
         self.last = Step(avoid_left, avoid_right, left, right, shocked, forgetting, coincidence)
         return self.last
 
@@ -160,9 +188,19 @@ class Brain:
         return self.integrate(dt, in_train=in_train)
 
     def idle(self, seconds, dt=0.02, sub=20) -> None:
-        """Parked robot, lights off. Dopamine is averaged across ``sub`` steps."""
-        block = dt * sub
-        n_blocks = int(round(float(seconds) / block))
+        """Parked robot, lights off. Dopamine is averaged across microsteps.
+
+        ``seconds`` is robot time. Each microstep is one compression-1 tick
+        (``dt`` native seconds), and the memory block is ``dt * sub``
+        biological minutes. A higher compression only shortens the robot
+        clock; the biological Euler step stays the one compression 1 uses.
+        """
+        comp = self.compression if self.compression > 0.0 else 1.0
+        bio_block = dt * sub
+        robot_block = bio_block / comp
+        if bio_block <= 0.0:
+            return
+        n_blocks = int(round(float(seconds) * comp / bio_block))
         kenyon = np.zeros(self.mb.n_kc, np.float32)
         for _ in range(n_blocks):
             self.dan.off = -0.5 * self.mb.phi
@@ -177,14 +215,15 @@ class Brain:
             acc_f /= sub
             acc_z /= sub
             self.mb.step_mem(
-                block * self.compression,
+                bio_block,
                 self.bio_min,
                 acc_f.astype(np.float32),
                 acc_z,
                 kenyon=kenyon,
-                dt_robot=block,
+                dt_robot=robot_block,
+                compression=comp,
             )
-            self.t += block
+            self.t += robot_block
 
     def traces(self, kenyon=None) -> dict[str, float]:
         if kenyon is None:
@@ -239,8 +278,10 @@ class Brain:
             "rounds": schedule["rounds"],
             "rest_s": schedule["rest_s"],
             "gate_s": schedule["gate_s"],
+            "win_s": schedule["win_s"],
             "win_left_s": schedule["win_left_s"],
             "gap_ready": schedule["gap_ready"],
+            "timings": self.timings(),
             "mp1": float(self.dan.D[0]),
             "mv1": float(self.dan.D[1]),
             "shock_elig": float(self.shock_elig),
@@ -331,10 +372,39 @@ class Brain:
             + self.dan.a.nbytes
         )
 
+    def timings(self) -> dict:
+        """Wall-clock seconds for the operator protocol at this compression."""
+        comp = self.compression if self.compression > 0.0 else 1.0
+        return {
+            "compression": comp,
+            "red_s": robot_seconds(PROTOCOL["red"], comp),
+            "blue_s": robot_seconds(PROTOCOL["blue"], comp),
+            "punish_every_s": robot_seconds(PROTOCOL["punish_every"], comp),
+            "in_view_s": robot_seconds(PROTOCOL["in_view"], comp),
+            "rest_spaced_s": robot_seconds(PROTOCOL["rest_spaced"], comp),
+            "rest_massed_s": robot_seconds(PROTOCOL["rest_massed"], comp),
+            "test_s": robot_seconds(PROTOCOL["test"], comp),
+            "day_s": robot_seconds(PROTOCOL["next_day"], comp),
+            "gate_s": robot_seconds(MEMORY["gate"], comp),
+            "win_s": robot_seconds(MEMORY["win"], comp),
+            "refractory_s": self.refractory_s,
+        }
+
+    def snapshot(self) -> dict:
+        return dump(self)
+
+    def restore(self, payload: dict) -> None:
+        load(self, payload)
+
+    def reset_naive(self) -> None:
+        """Drop learning and return to the fly this process was born with."""
+        load(self, self._naive)
+
     def _signals(self, dt):
         self.dan.off = -0.5 * self.mb.phi
-        dopamine = self.dan.step(dt, ext=self.us_ext)
-        self.us_ext = max(0.0, self.us_ext - dt * SHOCK_DECAY)
+        comp = self.compression if self.compression > 0.0 else 1.0
+        dopamine = self.dan.step(dt * comp, ext=self.us_ext)
+        self.us_ext = max(0.0, self.us_ext - dt * SHOCK_DECAY * comp)
         return self.mb.signals(dopamine)
 
 
