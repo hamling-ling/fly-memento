@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 _PAGE = Path(__file__).resolve().parents[1].joinpath("assets", "index.html").read_bytes()
-_SEEING = {"green_l": 0.0, "green_r": 0.0, "yellow_l": 0.0, "yellow_r": 0.0}
+_SEEING = {"red_l": 0.0, "red_r": 0.0, "blue_l": 0.0, "blue_r": 0.0}
 
 
 class TrainUI:

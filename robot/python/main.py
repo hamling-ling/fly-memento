@@ -48,10 +48,10 @@ def _mbon_triple(brain, pn) -> tuple[float, float, float]:
 
 def _busy(step, pulses, fractions, punished, mode) -> bool:
     seen = max(
-        float(fractions.get("green_l", 0.0)),
-        float(fractions.get("green_r", 0.0)),
-        float(fractions.get("yellow_l", 0.0)),
-        float(fractions.get("yellow_r", 0.0)),
+        float(fractions.get("red_l", 0.0)),
+        float(fractions.get("red_r", 0.0)),
+        float(fractions.get("blue_l", 0.0)),
+        float(fractions.get("blue_r", 0.0)),
     )
     return bool(
         punished
@@ -131,8 +131,8 @@ def run(brain=None, eyes=None, motors=None, port=PORT, duration=None, dry=False)
             if due or (detail and busy):
                 last_mark = mark
                 line = trace_line(
-                    (float(fractions["green_l"]), float(fractions["green_r"])),
-                    (float(fractions["yellow_l"]), float(fractions["yellow_r"])),
+                    (float(fractions["red_l"]), float(fractions["red_r"])),
+                    (float(fractions["blue_l"]), float(fractions["blue_r"])),
                     (step.avoid_left, step.avoid_right),
                     mbon_left,
                     mbon_right,

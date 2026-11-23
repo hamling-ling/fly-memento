@@ -6,7 +6,7 @@ import pytest
 from brain.brain import make_brain
 from brain.budget import flop_budget, flops_per_step, mcu_state_bytes
 from brain.coding import pn_code
-from brain.constants import N_KC
+from brain.constants import CS_PLUS_HUE, N_KC
 from brain.dan import DAN2
 from brain.sets import OSC_SETS
 from brain.wheels import wheel_speeds
@@ -16,15 +16,15 @@ def _dark():
     return np.zeros(10, np.float32)
 
 
-def _green():
-    return pn_code([0.5], [120.0])
+def _red():
+    return pn_code([0.5], [CS_PLUS_HUE])
 
 
 def _run(brain, steps=40):
-    green = _green()
+    red = _red()
     dark = _dark()
     for i in range(steps):
-        view = green if i % 2 == 0 else dark
+        view = red if i % 2 == 0 else dark
         brain.step(view, view, 0.02)
 
 
@@ -58,17 +58,17 @@ def test_shock_writes_only_eligible_cells_and_respects_refractory():
     brain = make_brain(3)
     brain.mb.eligibility[:] = 1.0
     brain.request_shock()
-    brain.step(_green(), _green(), 0.02)
+    brain.step(_red(), _red(), 0.02)
     assert brain.n_shocks == 1
     assert float(brain.mb.S.mean()) == pytest.approx(0.13, abs=1e-3)
     brain.request_shock()
-    brain.step(_green(), _green(), 0.02)
+    brain.step(_red(), _red(), 0.02)
     assert brain.n_shocks == 1
 
     quiet = make_brain(3, learn=False)
     quiet.mb.eligibility[:] = 1.0
     quiet.request_shock()
-    quiet.step(_green(), _green(), 0.02)
+    quiet.step(_red(), _red(), 0.02)
     assert quiet.n_shocks == 1
     assert float(quiet.mb.S.sum()) == 0.0
 

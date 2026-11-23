@@ -1,9 +1,15 @@
-"""Green and yellow in the two overlapping eyes, then the shared PN code.
+"""Red and blue in the two overlapping eyes, then the shared PN code.
 
-The eye split is fly-car's: the left eye is the left 65% of the frame, the
-right eye is the right 65%, so the middle is in both. Hue is degrees, not
-OpenCV's half-degree units. OpenCV is used for the camera when it is
+Red is punished (CS+) and blue is safe (CS−). The eye split is fly-car's:
+the left eye is the left 65% of the frame, the right eye is the right 65%,
+so the middle is in both. Hue is degrees, not OpenCV's half-degree units
+(an OpenCV hue is half of these). OpenCV is used for the camera when it is
 installed; the masks themselves are numpy so the tests do not need it.
+
+Gates are the named entries ``red`` and ``blue`` in ``color_thresholds.json``.
+Red is two ranges because hue wraps through 0°. Saturation and value are
+0–255 floors for indoor light. Those numbers are a starting point. Fit them
+on the board before a real session.
 """
 
 from __future__ import annotations
@@ -33,6 +39,7 @@ def bgr_to_hsv(frame: np.ndarray):
     minimum = np.minimum(np.minimum(r, g), b)
     span = maximum - minimum
     hue = np.zeros_like(maximum)
+    # Which channel is brightest. This is the hue formula, not the red/blue gates.
     red = (maximum == r) & (span > 0)
     green = (maximum == g) & (span > 0)
     blue = (maximum == b) & (span > 0) & ~red & ~green
@@ -45,13 +52,16 @@ def bgr_to_hsv(frame: np.ndarray):
 
 
 def _mask(hue, saturation, value, name: str) -> np.ndarray:
+    """Pixels inside one named gate.
+
+    ``ranges`` is a list of inclusive ``[low, high]`` lobes in degrees.
+    Red needs two lobes; 0° and 360° are the same hue.
+    """
     gate = _THRESHOLDS[name]
-    return (
-        (hue >= gate["hue_low"])
-        & (hue <= gate["hue_high"])
-        & (saturation >= gate["saturation"])
-        & (value >= gate["value"])
-    )
+    inside = np.zeros(hue.shape, dtype=bool)
+    for low, high in gate["ranges"]:
+        inside |= (hue >= low) & (hue <= high)
+    return inside & (saturation >= gate["saturation"]) & (value >= gate["value"])
 
 
 def _eye_mean(mask: np.ndarray, columns: np.ndarray) -> float:
@@ -70,24 +80,24 @@ def eye_fractions(frame: np.ndarray, mirror: bool = False) -> dict[str, float]:
     position = (np.arange(width) + 0.5) / float(width)
     left = position <= LEFT_HI
     right = position >= RIGHT_LO
-    green = _mask(hue, saturation, value, "green")
-    yellow = _mask(hue, saturation, value, "yellow")
+    red = _mask(hue, saturation, value, "red")
+    blue = _mask(hue, saturation, value, "blue")
     return {
-        "green_l": _eye_mean(green, left),
-        "green_r": _eye_mean(green, right),
-        "yellow_l": _eye_mean(yellow, left),
-        "yellow_r": _eye_mean(yellow, right),
+        "red_l": _eye_mean(red, left),
+        "red_r": _eye_mean(red, right),
+        "blue_l": _eye_mean(blue, left),
+        "blue_r": _eye_mean(blue, right),
     }
 
 
 def pn_from_fractions(fractions: dict[str, float], gain: float = 1.0):
     scale = float(gain)
     left = pn_code(
-        [scale * fractions["green_l"], scale * fractions["yellow_l"]],
+        [scale * fractions["red_l"], scale * fractions["blue_l"]],
         [CS_PLUS_HUE, CS_MINUS_HUE],
     )
     right = pn_code(
-        [scale * fractions["green_r"], scale * fractions["yellow_r"]],
+        [scale * fractions["red_r"], scale * fractions["blue_r"]],
         [CS_PLUS_HUE, CS_MINUS_HUE],
     )
     return left, right
@@ -106,7 +116,7 @@ class Eyes:
         self.mirror = mirror
         self.gain = gain
         self.frame = None
-        self.fractions = {"green_l": 0.0, "green_r": 0.0, "yellow_l": 0.0, "yellow_r": 0.0}
+        self.fractions = {"red_l": 0.0, "red_r": 0.0, "blue_l": 0.0, "blue_r": 0.0}
         self._capture = None
         self._camera_note = None
 
