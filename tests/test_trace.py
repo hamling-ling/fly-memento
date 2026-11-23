@@ -21,6 +21,7 @@ def _line(**overrides) -> str:
         pulses=(48, -36),
         cycle="cycle",
         mode="avoid",
+        drive="avoid",
     )
     fields.update(overrides)
     return trace_line(**fields)
@@ -40,14 +41,14 @@ def test_trace_line_names_the_shock_the_mbon_and_the_pulses():
     assert "punish yes" in text
     assert "wheel R:0.060 L:-0.020" in text
     assert "pulse R:48 L:-36" in text
-    assert text.endswith("cycle avoid")
+    assert text.endswith("cycle avoid  drive avoid")
 
 
 def test_trace_line_marks_a_step_without_a_shock():
     text = _line(punished=False)
     assert "punish no" in text
     assert "punish yes" not in text
-    assert text.endswith("pulse R:48 L:-36  cycle avoid")
+    assert text.endswith("pulse R:48 L:-36  cycle avoid  drive avoid")
 
 
 def test_trace_mark_ignores_a_trace_wiggle_under_a_thousandth():

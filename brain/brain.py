@@ -113,11 +113,15 @@ class Brain:
         self.begin_cycle()
         return "cycle"
 
-    def sense(self, pn_left, pn_right):
-        """Kenyon cells and wheel speeds for this view. Does not advance time."""
+    def sense(self, pn_left, pn_right, bias=None):
+        """Kenyon cells and wheel speeds for this view. Does not advance time.
+
+        ``bias`` is forwarded to ``wheel_speeds``. ``None`` keeps the arena
+        cruise ``WHEEL_BIAS``. The robot passes 0 unless exploration is on.
+        """
         avoid_left, kenyon_left = self.mb.avoid(pn_left)
         avoid_right, kenyon_right = self.mb.avoid(pn_right)
-        left, right = wheel_speeds(pn_left, pn_right, avoid_left, avoid_right)
+        left, right = wheel_speeds(pn_left, pn_right, avoid_left, avoid_right, bias=bias)
         self._seen = (pn_left, pn_right, avoid_left, avoid_right, kenyon_left, kenyon_right, left, right)
         return avoid_left, avoid_right, left, right
 
@@ -143,8 +147,8 @@ class Brain:
         self.last = Step(avoid_left, avoid_right, left, right, shocked, forgetting, coincidence)
         return self.last
 
-    def step(self, pn_left, pn_right, dt, in_train=False) -> Step:
-        self.sense(pn_left, pn_right)
+    def step(self, pn_left, pn_right, dt, in_train=False, bias=None) -> Step:
+        self.sense(pn_left, pn_right, bias=bias)
         return self.integrate(dt, in_train=in_train)
 
     def idle(self, seconds, dt=0.02, sub=20) -> None:

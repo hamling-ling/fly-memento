@@ -1,13 +1,16 @@
 {
   "red": {
-    "ranges": [[0, 20], [340, 360]],
-    "saturation": 60,
-    "value": 50
+    "saturation": 100,
+    "value": 120,
+    "hue_low": -1,
+    "hue_wrap": 322
   },
   "blue": {
-    "ranges": [[200, 260]],
-    "saturation": 60,
-    "value": 50
+    "saturation": 160,
+    "value": 70,
+    "hue_low": 180,
+    "hue_high": 220
   },
-  "note": "Indoor starting gates, not a fit on the real camera. Hue is degrees (twice an OpenCV hue). Red is two ranges because hue wraps through 0°: [0, 20] and [340, 360] are OpenCV about 0–10 and 170–180. Blue [200, 260] is OpenCV about 100–130. Saturation and value are 0–255 floors so a dim or slightly washed patch still counts and gray walls do not. Recalibrate under the room lights the way fly-car fits color_thresholds.json. Warm bulbs can push red toward orange and blue toward purple; widen the open end of a range if the panel is missed, and raise saturation if wood or skin counts as red."
+  "fraction_floor": 0.05,
+  "note": "Camera gates are fly-car's fit on this Uno Q (color_thresholds.json, 2026-11-15), not a wide indoor guess. Hue is degrees; OpenCV stores half of that. Red is (hue <= hue_low) or (hue >= hue_wrap). hue_low -1 turns the low side off, so only hue >= 322 counts: the paper sits near 340, and hue 0 was false red (orange, wood, skin). Blue is the closed interval 180-220. Saturation and value are 0-255 floors. A connected blob smaller than 0.2% of the frame is dropped in code (REGION_MIN_FRACTION). fraction_floor is this app's extra deadband: a smaller eye fill is logged and is not passed to the brain. If a red panel near hue 0 is missed, raise hue_low (for example to 20). If a blue panel near 240 is missed, raise hue_high. Raise saturation if a wall still counts."
 }
