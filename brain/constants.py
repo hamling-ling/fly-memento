@@ -69,6 +69,16 @@ CHASSIS_WHEELBASE_M = 0.08
 WHEEL_BIAS = 0.35
 WHEEL_APPROACH = 1.0
 WHEEL_AVOID = 2.5
+# Subtracted from both wheels, times the mean avoidance. The differential
+# alone has a positive common mode, so equal avoidance used to command
+# full forward. This term makes a strong match reverse.
+WHEEL_RETREAT = 1.25
+# Extra yaw, in the same dimensionless units, when avoidance is strong and
+# the two eyes agree. +1 speeds the right wheel and slows the left (fly-car
+# positive yaw, a left turn). Held until the eyes disagree by WHEEL_SYMM_RELEASE.
+WHEEL_SPIN = 0.7
+WHEEL_SYMM_MIN = 0.35
+WHEEL_SYMM_RELEASE = 0.25
 
 # Below this brightness the eye has no Kenyon-cell code.
 KC_FLOOR = 0.03

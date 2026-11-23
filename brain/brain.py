@@ -18,7 +18,7 @@ from brain.constants import (
 from brain.dan import DAN2
 from brain.memory import MB
 from brain.sets import NORMS, OSC_SETS
-from brain.wheels import wheel_speeds
+from brain.wheels import update_avoid_spin, wheel_speeds
 
 
 @dataclass
@@ -69,6 +69,7 @@ class Brain:
         self._eps_value = float(eps) if float(eps) > 0.0 else 0.1
         self.last: Step | None = None
         self._seen = None
+        self.avoid_spin = 0.0
 
     @property
     def bio_min(self) -> float:
@@ -124,7 +125,11 @@ class Brain:
         """
         avoid_left, kenyon_left = self.mb.avoid(pn_left)
         avoid_right, kenyon_right = self.mb.avoid(pn_right)
-        left, right = wheel_speeds(pn_left, pn_right, avoid_left, avoid_right, bias=bias)
+        stored, applied = update_avoid_spin(self.avoid_spin, avoid_left, avoid_right)
+        self.avoid_spin = stored
+        left, right = wheel_speeds(
+            pn_left, pn_right, avoid_left, avoid_right, bias=bias, spin=applied
+        )
         self._seen = (pn_left, pn_right, avoid_left, avoid_right, kenyon_left, kenyon_right, left, right)
         return avoid_left, avoid_right, left, right
 
